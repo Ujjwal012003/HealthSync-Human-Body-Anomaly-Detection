@@ -91,14 +91,25 @@ python run.py
 ```
 8. **Access the application**: Open your browser and navigate to <https://localhost:5000>
 
-### Note: Model Files
-The trained XGBoost models (`Fracture_XGBoost` and `TB_XGBoost`) are large binary files that are not included in this repository due to size limitations. You will need to:
+### Model Files Setup
 
-1. Train the models using the provided training scripts
-2. Or download the pre-trained models from a separate source
+The trained XGBoost models are large binary files that need to be downloaded separately:
+
+#### Option 1: Download from GitHub Releases (Recommended)
+1. Go to [Releases](https://github.com/Ujjwal012003/HealthSync-Human-Body-Anomaly-Detection/releases/latest)
+2. Download the model files directly:
+   - [Fracture_XGBoost](https://github.com/Ujjwal012003/HealthSync-Human-Body-Anomaly-Detection/releases/download/v1.0.0/Fracture_XGBoost)
+   - [TB_XGBoost](https://github.com/Ujjwal012003/HealthSync-Human-Body-Anomaly-Detection/releases/download/v1.0.0/TB_XGBoost)
 3. Place them in the `CancerDetectionWeb/` directory
 
-The application will still run without these files, but prediction functionality will be limited.
+#### Option 2: Train Your Own Models
+If you prefer to train your own models:
+1. Use the provided training scripts in the `data/` directory
+2. Follow the instructions in the training notebooks
+3. Place the trained models in the `CancerDetectionWeb/` directory
+
+#### Option 3: Run Without Models
+The application will run without model files, but prediction functionality will be limited to basic image upload and display.
 
 ## Usage Guide
 
