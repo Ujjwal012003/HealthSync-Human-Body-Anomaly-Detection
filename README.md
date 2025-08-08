@@ -49,50 +49,56 @@ HealthSync AI is an advanced medical diagnostic tool that applies AI and machine
 ## Setup Instructions
 
 ### Prerequisites
-- Python 3.7+ installed
-- pip (Python package manager)
-- Git (optional, for cloning the repository)
+
+* Python 3.7+ installed
+* pip (Python package manager)
+* Git (optional, for cloning the repository)
 
 ### Installation Steps
 
-1. **Clone the repository** (or download and extract the ZIP file):
-   ```
-   git clone https://github.com/your-username/human-body-anomaly-detection.git
-   cd human-body-anomaly-detection
-   ```
+1. **Clone the repository** (or download and extract the ZIP file):  
+```  
+git clone https://github.com/Ujjwal012003/HealthSync-Human-Body-Anomaly-Detection.git  
+cd HealthSync-Human-Body-Anomaly-Detection  
+```
+2. **Navigate to the main application directory**:  
+```  
+cd "Human Body Anomaly Detection/CancerDetectionWeb"  
+```
+3. **Create and activate a virtual environment**:  
+```  
+python -m venv .venv  
+# On Windows  
+.\.venv\Scripts\activate  
+# On macOS/Linux  
+source .venv/bin/activate  
+```
+4. **Install dependencies**:  
+```  
+pip install -r requirements.txt  
+```
+5. **Run the setup script** (optional but recommended):  
+```  
+python setup.py  
+```
+6. **Initialize the database** (if needed):  
+```  
+python init_db.py  
+```
+7. **Run the application**:  
+```  
+python run.py  
+```
+8. **Access the application**: Open your browser and navigate to <https://localhost:5000>
 
-2. **Create and activate a virtual environment**:
-   ```
-   python -m venv .venv
-   # On Windows
-   .\.venv\Scripts\activate
-   # On macOS/Linux
-   source .venv/bin/activate
-   ```
+### Note: Model Files
+The trained XGBoost models (`Fracture_XGBoost` and `TB_XGBoost`) are large binary files that are not included in this repository due to size limitations. You will need to:
 
-3. **Install dependencies**:
-   ```
-   cd CancerDetectionWeb
-   pip install -r requirements.txt
-   ```
+1. Train the models using the provided training scripts
+2. Or download the pre-trained models from a separate source
+3. Place them in the `CancerDetectionWeb/` directory
 
-4. **Initialize the database**:
-   ```
-   python drop_and_recreate_tables.py
-   ```
-
-5. **Validate setup**:
-   ```
-   python validate_setup.py
-   ```
-
-6. **Run the application**:
-   ```
-   python run.py
-   ```
-
-7. **Access the application**:
-   Open your browser and navigate to https://localhost:5000
+The application will still run without these files, but prediction functionality will be limited.
 
 ## Usage Guide
 
