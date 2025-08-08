@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient History - HealthSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #4b6cb7 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: #4ade80;
+            text-align: center;
+        }
+        .history-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .history-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .suggestion-form {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #93c5fd;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            margin-bottom: 1rem;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #4ade80;
+            color: #1e3a8a;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        button:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        a:hover {
+            color: #4ade80;
+            text-decoration: underline;
+        }
+        .patient-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .badge-positive {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+        }
+        .badge-negative {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #bbf7d0;
+        }
+        .tab-controls {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 0.5rem;
+        }
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            color: #fff;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-right: 1rem;
+            transition: border-color 0.2s ease;
+        }
+        .tab-button:hover, .tab-button.active {
+            border-color: #4ade80;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .nav-pill {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-pill:hover, .nav-pill.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+
+    <script>
+        function formatToIST(dateString) {
+            const date = new Date(dateString);
+            const options = { 
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            return date.toLocaleString('en-IN', options);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Convert all dates to IST format
+            document.querySelectorAll('.convert-to-ist').forEach(function(element) {
+                const originalDate = element.getAttribute('data-date');
+                element.textContent = formatToIST(originalDate);
+            });
+        });
+    </script>
+</head>
+<body class="{{ 'dark-mode' if dark_mode else '' }}">
+    <div class="container">
+        <header class="mb-6">
+            <div class="flex justify-between items-center">
+                <a href="{{ url_for('doctor_dashboard') }}" class="nav-pill flex items-center gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                </a>
+                <h1>Patient History</h1>
+                <div class="w-28"><!-- Spacer to center the title --></div>
+            </div>
+        </header>
+        
+        <!-- Patient Info Card -->
+        <div class="patient-info">
+            <div class="flex items-center mb-4">
+                <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-xl font-bold mr-4">
+                    {{ patient.name[0].upper() if patient.name else 'P' }}
+                </div>
+                <div>
+                    <h2 class="text-2xl font-semibold">{{ patient.name or 'Unnamed Patient' }}</h2>
+                    <p class="text-blue-200">{{ patient.email }}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                    <div class="text-sm text-blue-200">Age</div>
+                    <div>{{ patient.age or 'Not Set' }} years</div>
+                </div>
+                <div>
+                    <div class="text-sm text-blue-200">Gender</div>
+                    <div>{{ patient.sex or 'Not Set' }}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-blue-200">Weight</div>
+                    <div>{{ patient.weight|string + ' kg' if patient.weight else 'Not Set' }}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-blue-200">Height</div>
+                    <div>{{ patient.height|string + ' cm' if patient.height else 'Not Set' }}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-blue-200">Phone</div>
+                    <div>{{ patient.phone or 'Not Set' }}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-blue-200">Data Consent</div>
+                    <div>
+                        <span class="px-2 py-1 rounded-full text-xs {{ 'bg-green-500/20 text-green-200' if patient.data_consent else 'bg-red-500/20 text-red-200' }}">
+                            {{ 'Granted' if patient.data_consent else 'Not Granted' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if patient.allergies or patient.medications or patient.emergency_contact %}
+            <div class="mt-4 pt-4 border-t border-white/10">
+                <h3 class="text-lg font-medium mb-2">Medical Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if patient.allergies %}
+                    <div>
+                        <div class="text-sm text-blue-200">Allergies</div>
+                        <div>{{ patient.allergies }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if patient.medications %}
+                    <div>
+                        <div class="text-sm text-blue-200">Current Medications</div>
+                        <div>{{ patient.medications }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if patient.emergency_contact %}
+                    <div>
+                        <div class="text-sm text-blue-200">Emergency Contact</div>
+                        <div>{{ patient.emergency_contact }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- History Section Tabs -->
+        <div class="tab-controls">
+            <button class="tab-button active" data-tab="scan-history">
+                <i class="fas fa-history mr-2"></i>Scan History
+            </button>
+            <button class="tab-button" data-tab="messages">
+                <i class="fas fa-comment-medical mr-2"></i>Messages
+            </button>
+        </div>
+        
+        <!-- Scan History Tab -->
+        <div class="tab-content active" id="scan-history-tab">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-file-medical mr-2"></i>Medical Scan History
+            </h2>
+            
+            {% if history %}
+                {% for scan in history %}
+                    <div class="history-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-lg font-semibold">{{ scan.disease|capitalize }}</span>
+                                <span class="badge {{ 'badge-positive' if scan.result == 'Positive' else 'badge-negative' }}">
+                                    {{ scan.result }}
+                                </span>
+                            </div>
+                            <div class="text-sm text-blue-200">
+                                <i class="far fa-calendar-alt mr-1"></i>
+                                <span class="convert-to-ist" data-date="{{ scan.date }}">
+                                    {{ scan.date.astimezone(timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S %Z') if timezone is defined else scan.date.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {% if scan.suggestion %}
+                            <div class="mb-4 p-3 bg-blue-500/20 rounded-lg border-l-4 border-blue-500">
+                                <div class="text-sm text-blue-200 mb-1">Previous Medical Suggestion:</div>
+                                <p>{{ scan.suggestion }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        <form method="POST" action="">
+                            <input type="hidden" name="scan_id" value="{{ scan.id }}">
+                            <div class="suggestion-form">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-comment-medical mr-2 text-blue-300"></i>
+                                    <label class="font-medium">Update Medical Suggestion</label>
+                                </div>
+                                <textarea name="suggestion" placeholder="Enter your medical recommendation based on this scan..." rows="3">{{ scan.suggestion if scan.suggestion else '' }}</textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="flex items-center">
+                                        <i class="fas fa-save mr-2"></i> Save Suggestion
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-12 bg-white/5 rounded-lg">
+                    <i class="fas fa-file-medical text-5xl mb-4 text-blue-200 opacity-50"></i>
+                    <p class="text-xl mb-2">No scan history available.</p>
+                    <p class="text-blue-200">This patient hasn't performed any medical scans yet.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Messages Tab (Hidden by Default) -->
+        <div class="tab-content hidden" id="messages-tab">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-comment-dots mr-2"></i>Message History
+            </h2>
+            
+            <div id="message-history-container" class="bg-white/5 rounded-lg p-4">
+                <!-- Messages will be loaded via JavaScript -->
+                <div class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-200"></i>
+                    <p>Loading message history...</p>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <form class="flex gap-2" id="send-message-form">
+                    <input type="hidden" name="receiver_id" value="{{ patient.id }}">
+                    <input type="text" name="message" placeholder="Type a message..." class="flex-grow p-3 rounded-lg bg-white/10 border border-white/20" required>
+                    <button type="submit" class="whitespace-nowrap">
+                        <i class="fas fa-paper-plane mr-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="mt-8 text-center">
+            <a href="{{ url_for('doctor_dashboard') }}" class="text-blue-200 hover:text-white">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Function to format timestamps to IST
+            function formatToIST(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons and tabs
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    
+                    // Add active class to current button and tab
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId + '-tab').classList.remove('hidden');
+                    
+                    // Load messages if messages tab
+                    if (tabId === 'messages') {
+                        loadMessageHistory();
+                    }
+                });
+            });
+            
+            // Function to load message history
+            function loadMessageHistory() {
+                const patientId = parseInt("{{ patient.id }}");
+                fetch(`/get_chat_logs/${patientId}`, { credentials: 'include' })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load message history');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const container = document.getElementById('message-history-container');
+                        
+                        if (!data.chat_logs || data.chat_logs.length === 0) {
+                            container.innerHTML = `
+                                <div class="text-center py-8">
+                                    <i class="fas fa-comments text-5xl mb-4 text-blue-200 opacity-50"></i>
+                                    <p class="text-xl mb-2">No messages yet</p>
+                                    <p class="text-blue-200">Start a conversation with this patient.</p>
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        container.innerHTML = '';
+                        
+                        data.chat_logs.forEach(log => {
+                            const isDoctor = log.sender === "{{ user.name }}";
+                            
+                            const messageEl = document.createElement('div');
+                            messageEl.className = `flex ${isDoctor ? 'justify-end' : 'justify-start'} mb-4`;
+                            
+                            messageEl.innerHTML = `
+                                <div class="max-w-[70%] ${isDoctor ? 'bg-green-500/70' : 'bg-blue-500/70'} p-3 rounded-lg">
+                                    <div class="font-medium">${log.sender}</div>
+                                    <div>${log.message}</div>
+                                    <div class="text-xs opacity-70 mt-1">
+                                        ${formatToIST(log.timestamp)}
+                                    </div>
+                                </div>
+                            `;
+                            
+                            container.appendChild(messageEl);
+                        });
+                        
+                        // Scroll to bottom
+                        container.scrollTop = container.scrollHeight;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('message-history-container').innerHTML = `
+                            <div class="text-center py-8 text-red-300">
+                                <i class="fas fa-exclamation-circle text-3xl mb-4"></i>
+                                <p>Failed to load messages. Please try again.</p>
+                            </div>
+                        `;
+                    });
+            }
+            
+            // Handle send message form
+            const sendMessageForm = document.getElementById('send-message-form');
+            if (sendMessageForm) {
+                sendMessageForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    
+                    fetch('{{ url_for("send_message") }}', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to send message');
+                        }
+                        return response.json(); // Parse JSON response
+                    })
+                    .then(data => {
+                        // Clear message input
+                        this.querySelector('input[name="message"]').value = '';
+                        // Reload messages
+                        loadMessageHistory();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to send message. Please try again.');
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

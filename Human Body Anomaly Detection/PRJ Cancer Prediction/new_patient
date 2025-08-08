@@ -1,0 +1,18 @@
+# New patient data (replace these with real measurements)
+new_patient = {
+    'radius_mean': 15.5,  # Replace with new value
+    'texture_mean': 20.1, # Replace with new value
+    'perimeter_mean': 100.2, # Replace with new value
+    'area_mean': 800.0,   # Replace with new value
+    'smoothness_mean': 0.095, # Replace with new value
+    'compactness_mean': 0.150, # Replace with new value
+    'concavity_mean': 0.200,  # Replace with new value
+    'concave points_mean': 0.100, # Replace with new value
+    'symmetry_mean': 0.200,   # Replace with new value
+    'fractal_dimension_mean': 0.060, # Replace with new value
+    'radius_se': 0.800,   # Replace with new value
+    'texture_se': 1.200,  # Replace with new value
+    'perimeter_se': 5.5,  # Replace with new value
+    'area_se': 120.0,     # Replace with new value
+    'smoothness_se': 0.005 # Replace with new value
+}

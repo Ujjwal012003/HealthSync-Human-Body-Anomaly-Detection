@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - HealthSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/heatmapAnalysis.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #4b5563 100%);
+            color: #e2e8f0;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .chat-messages {
+            height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            max-width: 80%;
+            position: relative;
+            line-height: 1.4;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        .patient-message {
+            background: #4ade80;
+            color: #1e293b;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .doctor-message {
+            background: #93c5fd;
+            color: #1e293b;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .status-positive {
+            color: #f87171;
+        }
+        .status-negative {
+            color: #4ade80;
+        }
+        .suggestion-chip {
+            background: rgba(59, 130, 246, 0.2);
+            border-left: 3px solid #3b82f6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+        }
+        .nav-pill {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-pill:hover, .nav-pill.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        .pulse-animation {
+            animation: pulse 1.5s infinite;
+        }
+        .refresh-indicator {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        .real-time-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #4ade80;
+        }
+        .risk-level {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .risk-high {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+        }
+        .risk-medium {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #fde68a;
+        }
+        .risk-low {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #bbf7d0;
+        }
+    </style>
+</head>
+<body class="{{ 'dark-mode' if dark_mode else '' }}">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h1 class="text-3xl font-bold text-white">Patient Dashboard</h1>
+                    <p class="text-blue-200">Welcome back, {{ user.name or 'Patient' }}</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('index') }}" class="nav-pill flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="nav-pill flex items-center gap-2 text-red-200">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column - Profile -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-2xl font-bold">
+                            {{ user.name[0].upper() if user.name else 'P' }}
+                        </div>
+                        <div class="ml-4">
+                            <h2 class="text-xl font-semibold">{{ user.name or 'Not Set' }}</h2>
+                            <p class="text-blue-200">{{ user.email }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-blue-200">Age</span>
+                            <span>{{ user.age or 'Not Set' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-blue-200">Gender</span>
+                            <span>{{ user.sex or 'Not Set' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-blue-200">Weight</span>
+                            <span>{{ user.weight|string + ' kg' if user.weight else 'Not Set' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-blue-200">Height</span>
+                            <span>{{ user.height|string + ' cm' if user.height else 'Not Set' }}</span>
+                        </div>
+                    </div>
+                    
+                    <a href="{{ url_for('profile_update', user_id=user.id) }}" class="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all">
+                        <i class="fas fa-user-edit"></i>
+                        Update Profile
+                    </a>
+                </div>
+                
+                <div class="glass-card p-6">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Privacy Settings
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span>Data Consent</span>
+                            <span class="px-3 py-1 rounded-full text-xs {{ 'bg-green-500/20 text-green-200' if user.data_consent else 'bg-red-500/20 text-red-200' }}">
+                                {{ 'Granted' if user.data_consent else 'Not Granted' }}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <span>Data Anonymized</span>
+                            <span class="px-3 py-1 rounded-full text-xs {{ 'bg-green-500/20 text-green-200' if user.data_anonymized else 'bg-red-500/20 text-red-200' }}">
+                                {{ 'Yes' if user.data_anonymized else 'No' }}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <span>Last Data Access</span>
+                            <span class="text-sm">
+                                {{ user.last_data_access.strftime('%Y-%m-%d') if user.last_data_access else 'Never' }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <a href="{{ url_for('data_privacy', user_id=user.id) }}" class="mt-4 w-full py-2 px-4 bg-purple-500 hover:bg-purple-600 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all">
+                        <i class="fas fa-cog"></i>
+                        Manage Privacy
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Middle Column - Scan History -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 h-full">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold flex items-center">
+                            <i class="fas fa-history mr-2"></i>
+                            Scan History
+                        </h3>
+                        <div class="flex items-center">
+                            <div class="text-xs mr-2">
+                                <div id="last-refresh-time" class="refresh-indicator">
+                                    <span id="refresh-icon" class="mr-1"><i class="fas fa-sync-alt"></i></span>
+                                    <span id="refresh-status">Last updated: just now</span>
+                                </div>
+                                <div class="real-time-indicator mt-1">
+                                    <i class="fas fa-circle text-xs mr-1"></i> Real-time data
+                                </div>
+                            </div>
+                            <a href="{{ url_for('index') }}" class="py-2 px-4 bg-green-500 hover:bg-green-600 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-all">
+                                <i class="fas fa-plus"></i>
+                                New Scan
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div id="scan-history-container" class="space-y-4 overflow-y-auto max-h-[500px] pr-2" style="scrollbar-width: thin;">
+                        <div class="flex justify-center items-center py-10">
+                            <div class="text-center">
+                                <div class="inline-block mb-3">
+                                    <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                                </div>
+                                <p>Loading scan history...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Chat -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 h-full">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-comment-medical mr-2"></i>
+                        Chat with Doctor
+                    </h3>
+                    
+                    <div class="chat-messages mb-4 p-2" id="chat-messages">
+                        {% if chat_logs %}
+                            {% for log in chat_logs %}
+                                <div class="message {{ 'patient-message' if log.sender_id == user.id else 'doctor-message' }}">
+                                    <div class="font-medium">{{ log.sender_name }}</div>
+                                    {{ log.message }}
+                                    <div class="message-time">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-8 text-white/70">
+                                <i class="fas fa-comment-dots text-4xl mb-4 text-blue-200"></i>
+                                <p>No messages yet. Start a conversation with a doctor.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <form class="flex flex-col space-y-3" method="POST" action="{{ url_for('send_message') }}">
+                        <select name="receiver_id" class="w-full p-3 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white" required>
+                            <option value="" disabled selected>Select Doctor</option>
+                            {% for doctor in doctors %}
+                                <option value="{{ doctor.id }}">{{ doctor.name or 'Dr. ' + doctor.email }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="flex">
+                            <input type="text" name="message" placeholder="Type a message..." class="w-full p-3 rounded-l-lg bg-blue-900/20 border border-blue-500/30 text-white" required>
+                            <button type="submit" class="px-4 bg-blue-500 hover:bg-blue-600 rounded-r-lg text-white">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Medical Reports & Analytics Section -->
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fas fa-file-medical-alt mr-2"></i>
+                Medical Reports & Analytics
+            </h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Heat Maps Section -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Heat Maps & Analysis</h3>
+                        <div class="text-xs">
+                            <div class="real-time-indicator">
+                                <i class="fas fa-circle text-xs mr-1"></i> AI-powered visualization
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="heatmap-selector" class="mb-4">
+                        <label for="scan-selector" class="block mb-2 text-sm font-medium">Select Scan for Visualization</label>
+                        <select id="scan-selector" class="w-full p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white">
+                            <option value="">Select a scan to visualize</option>
+                            <!-- Options will be added dynamically with JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div id="heatmap-container" class="bg-white/5 rounded-lg p-4 mb-4 min-h-[300px] flex flex-col">
+                        <div id="heatmap-placeholder" class="text-center flex-1 flex flex-col items-center justify-center">
+                            <i class="fas fa-chart-area text-4xl mb-4 text-blue-300"></i>
+                            <p>Select a scan to view its heatmap visualization</p>
+                            <p class="text-sm text-blue-200 mt-2">The AI system will analyze your scan to highlight potential areas of concern</p>
+                        </div>
+                        <div id="heatmap-loading" class="hidden text-center flex-1 flex flex-col items-center justify-center">
+                            <div class="inline-block mb-3">
+                                <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                            </div>
+                            <p>Generating heatmap and analysis...</p>
+                            <p class="text-sm text-blue-200 mt-2">Our AI is analyzing image patterns</p>
+                        </div>
+                        <div id="heatmap-display" class="hidden w-full">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 id="heatmap-title" class="font-medium"></h4>
+                                <div id="confidence-indicator" class="px-3 py-1 text-xs rounded-full"></div>
+                            </div>
+                            <div class="flex flex-col md:flex-row gap-6">
+                                <div class="original-image w-full md:w-1/2">
+                                    <p class="text-sm text-blue-200 mb-2">Original Scan</p>
+                                    <div class="relative h-64 bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                                        <img id="original-scan-image" src="" alt="Original scan" class="max-w-full max-h-full object-contain" />
+                                    </div>
+                                </div>
+                                <div class="heatmap-image w-full md:w-1/2">
+                                    <p class="text-sm text-blue-200 mb-2">AI Analysis Heatmap</p>
+                                    <div class="relative h-64 bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                                        <img id="heatmap-image" src="" alt="Heatmap visualization" class="max-w-full max-h-full object-contain" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-blue-900/20 rounded-lg">
+                                <h5 class="font-medium mb-2">Analysis Breakdown:</h5>
+                                <ul id="heatmap-analysis" class="list-disc pl-5 space-y-1 text-sm"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="visualization-tabs" class="hidden border-b border-white/20 mb-4">
+                        <button class="py-2 px-4 font-medium visualization-tab active" data-tab="heatmap">Heatmap</button>
+                        <button class="py-2 px-4 font-medium visualization-tab" data-tab="intensity">Intensity Analysis</button>
+                        <button class="py-2 px-4 font-medium visualization-tab" data-tab="edges">Edge Detection</button>
+                    </div>
+                    
+                    <div id="visualization-content" class="hidden"></div>
+                </div>
+                
+                <!-- Hidden input to store currently viewed scan ID -->
+                <input type="hidden" id="currently-viewed-scan-id" value="">
+                
+                <!-- Reports Section -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Medical Reports</h3>
+                        <div>
+                            <button id="generate-report-btn" class="py-2 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-all">
+                                <i class="fas fa-file-medical"></i>
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="scan-selection-container" class="mb-4">
+                        <p class="text-sm text-blue-200 mb-2">Select scans to include in your medical report:</p>
+                        <div class="bg-blue-900/20 p-3 rounded-lg" role="alert" id="loading-scans">
+                            <i class="fas fa-spinner fa-spin mr-2"></i> Loading scan history...
+                        </div>
+                        <div id="scan-list" class="hidden space-y-2 mt-3 max-h-[200px] overflow-y-auto pr-2">
+                            <!-- Scan checkboxes will be added here dynamically -->
+                        </div>
+                        <div class="hidden mt-3 p-3 bg-yellow-900/20 rounded-lg" id="no-scans-message">
+                            No scan history found. Complete a scan first to generate reports.
+                        </div>
+                    </div>
+                    
+                    <div id="reports-container" class="space-y-4">
+                        <div id="reports-placeholder" class="text-center py-8">
+                            <i class="fas fa-file-download text-4xl mb-4 text-blue-300"></i>
+                            <p>No reports generated yet</p>
+                            <p class="text-sm text-blue-200 mt-2">Select scans above and click "Generate Report" to create a comprehensive medical report</p>
+                        </div>
+                        
+                        <div id="reports-list" class="hidden space-y-3">
+                            <!-- Reports will be added dynamically with JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div id="report-loading" class="hidden text-center py-8">
+                        <div class="inline-block mb-3">
+                            <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                        </div>
+                        <p>Generating your comprehensive medical report...</p>
+                        <p class="text-sm text-blue-200 mt-2">This may take a few moments</p>
+                    </div>
+                    
+                    <div class="mt-3 hidden" id="report-preview-container">
+                        <h6 class="font-medium mb-2">Report Preview:</h6>
+                        <div class="report-preview p-3 border border-blue-500/30 rounded-lg bg-blue-900/20">
+                            <!-- Report preview will be shown here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-sm text-blue-200">
+            <p>© 2025 HealthSync. All rights reserved.</p>
+            <p>The medical analysis and information provided are AI-assisted and should be reviewed by healthcare professionals.</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Auto-scroll chat to bottom
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Fetch scan history initially
+            fetchScanHistory();
+            
+            // Load patient's scan history for report generation
+            loadPatientScans();
+            
+            // Set up event listener for report generation button
+            const generateReportBtn = document.getElementById('generate-report-btn');
+            if (generateReportBtn) {
+                generateReportBtn.addEventListener('click', generateReport);
+            }
+            
+            // Set up interval to fetch scan history every 10 seconds
+            setInterval(fetchScanHistory, 10000);
+        });
+        
+        // Function to format dates
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Function to get risk level based on result and disease
+        function getRiskLevel(disease, result) {
+            if (result === 'Positive' || result === 'Tuberculosis') {
+                return 'high';
+            } else if (disease === 'fracture' && result === 'Negative') {
+                return 'low';
+            } else {
+                return 'low';
+            }
+        }
+        
+        // Function to get risk description
+        function getRiskDescription(riskLevel) {
+            switch(riskLevel) {
+                case 'high':
+                    return 'High risk - Requires immediate medical attention';
+                case 'medium':
+                    return 'Medium risk - Follow-up recommended';
+                case 'low':
+                    return 'Low risk - Regular monitoring advised';
+                default:
+                    return 'Unknown risk level';
+            }
+        }
+        
+        // Function to fetch scan history
+        function fetchScanHistory() {
+            // Show loading state
+            const refreshIcon = document.getElementById('refresh-icon');
+            refreshIcon.classList.add('pulse-animation');
+            
+            fetch('/api/patient/scan_history')
+                .then(response => response.json())
+                .then(data => {
+                    // Update last refresh time
+                    document.getElementById('refresh-status').textContent = 'Last updated: just now';
+                    refreshIcon.classList.remove('pulse-animation');
+                    
+                    // Get the container
+                    const container = document.getElementById('scan-history-container');
+                    
+                    // Clear current content
+                    container.innerHTML = '';
+                    
+                    if (data.history && data.history.length > 0) {
+                        // Add each scan to the container
+                        data.history.forEach(scan => {
+                            const riskLevel = getRiskLevel(scan.disease, scan.result);
+                            
+                            const scanElement = document.createElement('div');
+                            scanElement.className = 'glass-card p-4 hover:bg-white/10';
+                            
+                            scanElement.innerHTML = `
+                                <div class="flex justify-between mb-2">
+                                    <span class="font-medium">${scan.disease.charAt(0).toUpperCase() + scan.disease.slice(1)}</span>
+                                    <span class="${scan.result === 'Positive' || scan.result === 'Tuberculosis' ? 'status-positive' : 'status-negative'}">
+                                        ${scan.result}
+                                    </span>
+                                </div>
+                                <div class="text-sm text-blue-200 mb-2">
+                                    ${formatDate(scan.date)}
+                                </div>
+                                <div class="flex items-center mb-2">
+                                    <span class="text-xs mr-2">Risk level:</span>
+                                    <span class="risk-level risk-${riskLevel}">
+                                        ${riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
+                                    </span>
+                                </div>
+                                <div class="text-xs mb-2">
+                                    ${getRiskDescription(riskLevel)}
+                                </div>
+                                ${scan.suggestion ? `
+                                    <div class="suggestion-chip text-sm">
+                                        <span class="font-medium block mb-1">Doctor's Note:</span>
+                                        ${scan.suggestion}
+                                    </div>
+                                ` : ''}
+                            `;
+                            
+                            container.appendChild(scanElement);
+                        });
+                    } else {
+                        // No scan history
+                        container.innerHTML = `
+                            <div class="text-center py-8">
+                                <div class="text-blue-200 text-5xl mb-4">
+                                    <i class="fas fa-file-medical-alt"></i>
+                                </div>
+                                <p class="text-white/70 mb-4">No scan history available yet.</p>
+                                <a href="/index" class="py-2 px-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm inline-flex items-center gap-2">
+                                    <i class="fas fa-plus"></i>
+                                    Start Your First Scan
+                                </a>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching scan history:', error);
+                    refreshIcon.classList.remove('pulse-animation');
+                    document.getElementById('refresh-status').textContent = 'Update failed. Trying again...';
+                });
+        }
+        
+        // Auto-refresh chat
+        setInterval(function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userId = parseInt('{{ user.id }}');
+            
+            if (chatMessages) {
+                fetch('/api/patient/chat_logs')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.chat_logs && data.chat_logs.length > 0) {
+                            chatMessages.innerHTML = '';
+                            data.chat_logs.forEach(log => {
+                                const msgDiv = document.createElement('div');
+                                msgDiv.className = `message ${parseInt(log.sender_id) === userId ? 'patient-message' : 'doctor-message'}`;
+                                
+                                const senderSpan = document.createElement('div');
+                                senderSpan.className = 'font-medium';
+                                senderSpan.textContent = log.sender_name;
+                                
+                                const messageText = document.createElement('div');
+                                messageText.textContent = log.message;
+                                
+                                const timeSpan = document.createElement('div');
+                                timeSpan.className = 'message-time';
+                                timeSpan.textContent = formatDate(log.timestamp);
+                                
+                                msgDiv.appendChild(senderSpan);
+                                msgDiv.appendChild(messageText);
+                                msgDiv.appendChild(timeSpan);
+                                
+                                chatMessages.appendChild(msgDiv);
+                            });
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    })
+                    .catch(error => console.error('Error fetching chat logs:', error));
+            }
+        }, 5000);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-scroll chat to bottom
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Fetch scan history initially
+            fetchScanHistory();
+            
+            // Load patient's scan history for report generation
+            loadPatientScans();
+            
+            // Set up event listener for report generation button
+            const generateReportBtn = document.getElementById('generate-report-btn');
+            if (generateReportBtn) {
+                generateReportBtn.addEventListener('click', generateReport);
+            }
+            
+            // Set up interval to fetch scan history every 10 seconds
+            setInterval(fetchScanHistory, 10000);
+        });
+        
+        // Selected scan IDs
+        let selectedScanIds = [];
+        let reportData = null;
+        
+        // Load patient scans
+        function loadPatientScans() {
+            fetch('/api/patient/generate_report')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error loading scans');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const loadingElement = document.getElementById('loading-scans');
+                    loadingElement.classList.add('hidden');
+                    
+                    if (data.scans && data.scans.length > 0) {
+                        const scanListElement = document.getElementById('scan-list');
+                        scanListElement.classList.remove('hidden');
+                        scanListElement.innerHTML = '';
+                        
+                        // Create scan checkboxes
+                        data.scans.forEach(scan => {
+                            const scanDate = new Date(scan.date);
+                            const formattedDate = scanDate.toLocaleDateString();
+                            
+                            const scanItem = document.createElement('div');
+                            scanItem.className = 'flex items-center space-x-2';
+                            
+                            const resultBadge = scan.result === 'Positive' || scan.result === 'Tuberculosis' 
+                                ? '<span class="px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-300">Positive</span>' 
+                                : '<span class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-300">Negative</span>';
+                            
+                            scanItem.innerHTML = `
+                                <input type="checkbox" id="scan-${scan.id}" value="${scan.id}" class="scan-checkbox form-checkbox h-4 w-4 text-blue-500 rounded">
+                                <label for="scan-${scan.id}" class="cursor-pointer flex-1">
+                                    ${formattedDate} - ${scan.disease.toUpperCase()} ${resultBadge}
+                                </label>
+                            `;
+                            scanListElement.appendChild(scanItem);
+                        });
+                        
+                        // Add event listeners to checkboxes
+                        document.querySelectorAll('.scan-checkbox').forEach(checkbox => {
+                            checkbox.addEventListener('change', updateSelectedScans);
+                        });
+                    } else {
+                        document.getElementById('no-scans-message').classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading scans:', error);
+                    const loadingElement = document.getElementById('loading-scans');
+                    loadingElement.textContent = 'Error loading scans. Please try again later.';
+                    loadingElement.classList.add('text-red-300');
+                });
+        }
+        
+        // Update selected scans
+        function updateSelectedScans() {
+            selectedScanIds = [];
+            document.querySelectorAll('.scan-checkbox:checked').forEach(checkbox => {
+                selectedScanIds.push(parseInt(checkbox.value));
+            });
+        }
+        
+        // Generate report
+        function generateReport() {
+            // If we are viewing a specific scan, prioritize that scan
+            const currentlyViewedScanId = document.getElementById('currently-viewed-scan-id').value;
+            
+            // If we have a currently viewed scan, just use that one
+            if (currentlyViewedScanId) {
+                selectedScanIds = [parseInt(currentlyViewedScanId)];
+            } else if (selectedScanIds.length === 0) {
+                alert('Please select at least one scan to include in the report');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('reports-placeholder').classList.add('hidden');
+            document.getElementById('reports-list').classList.add('hidden');
+            document.getElementById('report-loading').classList.remove('hidden');
+            
+            // Call API to generate report
+            fetch('/api/patient/report/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    scan_ids: selectedScanIds
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error generating report');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Store report data
+                reportData = data;
+                
+                // Hide loading state
+                document.getElementById('report-loading').classList.add('hidden');
+                
+                // Show report preview
+                const reportPreviewContainer = document.getElementById('report-preview-container');
+                reportPreviewContainer.classList.remove('hidden');
+                
+                // Show reports list
+                const reportsList = document.getElementById('reports-list');
+                reportsList.classList.remove('hidden');
+                
+                // Add the new report to the list
+                addReportToList(data.report_preview);
+                
+                // Create preview content
+                const previewElement = reportPreviewContainer.querySelector('.report-preview');
+                
+                let previewHTML = `
+                    <h4 class="text-lg font-medium">Medical Report #${data.report_id}</h4>
+                    <p><strong>Patient:</strong> ${data.report_preview.patient_name}</p>
+                    <p><strong>Date:</strong> ${data.report_preview.report_date}</p>
+                    <hr class="my-2 border-blue-500/30">
+                    <h5 class="font-medium mt-2">Scan Results:</h5>
+                    <ul class="list-disc pl-5 mt-2">
+                `;
+                
+                data.report_preview.scans.forEach(scan => {
+                    const resultClass = scan.result === 'Positive' || scan.result === 'Tuberculosis' ? 'text-red-300' : 'text-green-300';
+                    
+                    previewHTML += `
+                        <li class="mb-2">
+                            <div class="font-medium">${scan.disease.toUpperCase()} - <span class="${resultClass}">${scan.result}</span> (${scan.date})</div>
+                            <div class="text-sm">Recommendation: ${scan.suggestion || 'None provided'}</div>
+                            <div class="mt-1 text-xs text-blue-200">
+                                Follow-up with ${scan.follow_up.specialist} in ${scan.follow_up.timeframe} (Priority: ${scan.follow_up.priority})
+                            </div>
+                        </li>
+                    `;
+                });
+                
+                previewHTML += `
+                    </ul>
+                    <p class="mt-3 text-sm text-blue-200">* Download the full report for detailed analysis and recommendations</p>
+                `;
+                
+                previewElement.innerHTML = previewHTML;
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                document.getElementById('report-loading').classList.add('hidden');
+                document.getElementById('reports-placeholder').classList.remove('hidden');
+                document.getElementById('reports-placeholder').innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4 text-red-400"></i>
+                    <p>Error generating report. Please try again.</p>
+                `;
+            });
+        }
+
+        // Function to add a report to the list
+        function addReportToList(report) {
+            const reportsList = document.getElementById('reports-list');
+            const reportDate = new Date(report.report_date);
+            
+            // Create report element
+            const reportElement = document.createElement('div');
+            reportElement.className = 'glass-card p-4 hover:bg-white/10';
+            
+            const reportId = report.report_id || `REP-${Date.now()}`;
+            
+            reportElement.innerHTML = `
+                <div class="flex justify-between mb-2">
+                    <h4 class="font-medium text-lg">Medical Report</h4>
+                    <span class="text-sm text-blue-200">${reportDate.toLocaleDateString()}</span>
+                </div>
+                <div class="mb-3">
+                    <div class="text-sm"><span class="text-blue-200">Contains:</span> ${report.scans.length} scans, full analysis</div>
+                </div>
+                <div class="flex justify-between mt-3">
+                    <button class="view-report-btn py-1 px-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm" data-report-id="${reportId}">
+                        <i class="fas fa-eye mr-1"></i> View
+                    </button>
+                    <button class="download-report-btn py-1 px-3 bg-green-500 hover:bg-green-600 rounded-lg text-white text-sm" data-report-id="${reportId}">
+                        <i class="fas fa-download mr-1"></i> Download PDF
+                    </button>
+                </div>
+            `;
+            
+            // Add to the top of the list
+            if (reportsList.firstChild) {
+                reportsList.insertBefore(reportElement, reportsList.firstChild);
+            } else {
+                reportsList.appendChild(reportElement);
+            }
+            
+            // Add event listeners to new buttons
+            reportElement.querySelector('.view-report-btn').addEventListener('click', function() {
+                const reportId = this.getAttribute('data-report-id');
+                viewReport(reportId);
+            });
+            
+            reportElement.querySelector('.download-report-btn').addEventListener('click', function() {
+                const reportId = this.getAttribute('data-report-id');
+                downloadReport(reportId);
+            });
+        }
+
+        // Function to view a report
+        function viewReport(reportId) {
+            // Fetch the report data and show in a modal
+            fetch(`/api/patient/report/${reportId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Create modal for report view
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+                    
+                    // Format scan dates
+                    const formattedScans = data.report.scans.map(scan => {
+                        const scanDate = new Date(scan.date);
+                        return {
+                            ...scan,
+                            formattedDate: scanDate.toLocaleDateString()
+                        };
+                    });
+                    
+                    // Modal content
+                    modal.innerHTML = `
+                        <div class="glass-card max-w-4xl max-h-[80vh] overflow-y-auto p-6 w-full">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-bold">Medical Report</h2>
+                                <button class="text-white hover:text-red-300" id="close-modal">
+                                    <i class="fas fa-times text-lg"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <h3 class="text-lg font-medium mb-2">Patient Information</h3>
+                                        <div class="glass-card p-3">
+                                            <div><span class="text-blue-200">Name:</span> ${data.report.patient.name}</div>
+                                            <div><span class="text-blue-200">Age:</span> ${data.report.patient.age}</div>
+                                            <div><span class="text-blue-200">Gender:</span> ${data.report.patient.sex}</div>
+                                            <div><span class="text-blue-200">Height:</span> ${data.report.patient.height} cm</div>
+                                            <div><span class="text-blue-200">Weight:</span> ${data.report.patient.weight} kg</div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-medium mb-2">Report Summary</h3>
+                                        <div class="glass-card p-3">
+                                            <div><span class="text-blue-200">Generated On:</span> ${new Date(data.report.generated_date).toLocaleString()}</div>
+                                            <div><span class="text-blue-200">Generated By:</span> ${data.report.generated_by}</div>
+                                            <div><span class="text-blue-200">Scans Analyzed:</span> ${data.report.scans.length}</div>
+                                            <div><span class="text-blue-200">Report ID:</span> ${data.report.id}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="text-lg font-medium mb-2">Scan History & Results</h3>
+                                <div class="space-y-4">
+                                    ${formattedScans.map(scan => `
+                                        <div class="glass-card p-3">
+                                            <div class="flex justify-between mb-2">
+                                                <div class="font-medium">${scan.disease.charAt(0).toUpperCase() + scan.disease.slice(1)}</div>
+                                                <div class="${scan.result === 'Positive' || scan.result === 'Tuberculosis' ? 'text-red-300' : 'text-green-300'}">${scan.result}</div>
+                                            </div>
+                                            <div class="text-sm text-blue-200 mb-2">${scan.formattedDate}</div>
+                                            ${scan.suggestion ? `
+                                                <div class="mt-2 p-2 bg-blue-900/20 rounded">
+                                                    <div class="text-sm font-medium mb-1">Doctor's Notes:</div>
+                                                    <div class="text-sm">${scan.suggestion}</div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <button class="download-pdf-btn py-2 px-4 bg-green-500 hover:bg-green-600 rounded-lg text-white text-sm flex items-center gap-2" data-report-id="${data.report.id}">
+                                    <i class="fas fa-file-pdf"></i>
+                                    Download as PDF
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    
+                    // Handle close modal
+                    document.getElementById('close-modal').addEventListener('click', function() {
+                        document.body.removeChild(modal);
+                    });
+                    
+                    // Close modal on outside click
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            document.body.removeChild(modal);
+                        }
+                    });
+                    
+                    // Handle PDF download from modal
+                    modal.querySelector('.download-pdf-btn').addEventListener('click', function() {
+                        const reportId = this.getAttribute('data-report-id');
+                        downloadReport(reportId);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error viewing report:', error);
+                    alert('Error loading report. Please try again.');
+                });
+        }
+
+        // Download report
+        function downloadReport(reportId) {
+            // Show loading indicator or message
+            const downloadStatus = document.createElement('div');
+            downloadStatus.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            downloadStatus.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Preparing PDF report...';
+            document.body.appendChild(downloadStatus);
+            
+            // Create request to download report
+            fetch(`/api/patient/report/${reportId}/download`)
+                .then(response => {
+                    if (!response.ok) {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            return response.json().then(data => {
+                                throw new Error(data.error || 'Error downloading report');
+                            });
+                        }
+                        throw new Error(`Server error (${response.status}): ${response.statusText}`);
+                    }
+                    
+                    // Check content type to handle different types of responses
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('text/html')) {
+                        return response.blob().then(blob => {
+                            return {
+                                blob,
+                                fileType: 'html',
+                                fileName: `Medical_Report_${reportId}.html`
+                            };
+                        });
+                    } else if (contentType && contentType.includes('application/pdf')) {
+                        return response.blob().then(blob => {
+                            return {
+                                blob,
+                                fileType: 'pdf',
+                                fileName: `Medical_Report_${reportId}.pdf`
+                            };
+                        });
+                    } else {
+                        // Default to treating as text
+                        return response.blob().then(blob => {
+                            return {
+                                blob,
+                                fileType: 'txt',
+                                fileName: `Medical_Report_${reportId}.txt`
+                            };
+                        });
+                    }
+                })
+                .then(({blob, fileType, fileName}) => {
+                    // Create a download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Clean up
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }, 100);
+                    
+                    // Update status message
+                    downloadStatus.innerHTML = `<i class="fas fa-check-circle mr-2"></i> Report downloaded successfully as ${fileType.toUpperCase()}!`;
+                    setTimeout(() => {
+                        document.body.removeChild(downloadStatus);
+                    }, 3000);
+                })
+                .catch(error => {
+                    console.error('Error downloading report:', error);
+                    // Update status message for error
+                    downloadStatus.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                    downloadStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> ${error.message || 'Error downloading report. Try again.'}`;
+                    
+                    // Add a retry button
+                    const retryBtn = document.createElement('button');
+                    retryBtn.className = 'ml-3 bg-white text-red-500 px-2 py-1 rounded text-xs font-bold';
+                    retryBtn.innerHTML = 'Retry';
+                    retryBtn.onclick = function() {
+                        document.body.removeChild(downloadStatus);
+                        downloadReport(reportId);
+                    };
+                    downloadStatus.appendChild(retryBtn);
+                    
+                    setTimeout(() => {
+                        if (document.body.contains(downloadStatus)) {
+                            document.body.removeChild(downloadStatus);
+                        }
+                    }, 10000); // Show error for longer
+                });
+        }
+    </script>
+</body>
+</html>

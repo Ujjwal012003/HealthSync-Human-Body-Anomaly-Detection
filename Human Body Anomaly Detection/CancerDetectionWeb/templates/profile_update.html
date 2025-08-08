@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Profile - HealthSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #4b5563 100%);
+            color: #e2e8f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 800;
+            color: #4ade80;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #93c5fd;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #4ade80;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+        }
+        .invalid-feedback {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        input.is-invalid, select.is-invalid {
+            border-color: #ef4444;
+        }
+        input.is-invalid + .invalid-feedback {
+            display: block;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #4ade80;
+            color: #1e3a8a;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+        button:hover {
+            background: #22c55e;
+            transform: translateY(-2px);
+        }
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            transition: color 0.2s;
+        }
+        a:hover {
+            color: #4ade80;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            margin-top: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .form-section {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        .form-section-title i {
+            margin-right: 0.5rem;
+        }
+        .last-updated {
+            text-align: center;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="{{ 'dark-mode' if dark_mode else '' }}">
+    <div class="container">
+        <h1><i class="fas fa-user-edit mr-2"></i>Update Profile</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="{{ 'bg-green-500/20 text-green-200 p-3 rounded-lg mb-4' if category == 'success' else 'bg-red-500/20 text-red-200 p-3 rounded-lg mb-4' }}">
+                        <i class="{{ 'fas fa-check-circle mr-2' if category == 'success' else 'fas fa-exclamation-circle mr-2' }}"></i>{{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="" id="profile-form">
+            <!-- Personal Information Section -->
+            <div class="form-section">
+                <h2 class="form-section-title"><i class="fas fa-user"></i>Personal Information</h2>
+                
+                <div class="form-group">
+                    <label class="form-label" for="name">Full Name</label>
+                    <input type="text" name="name" id="name" value="{{ user.name or '' }}" placeholder="Enter your full name" required>
+                    <div class="invalid-feedback">Please enter your name</div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label" for="age">Age</label>
+                        <input type="number" name="age" id="age" min="1" max="120" value="{{ user.age or '' }}" placeholder="Age" required>
+                        <div class="invalid-feedback">Please enter a valid age (1-120)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="sex">Sex</label>
+                        <select name="sex" id="sex" required>
+                            <option value="" disabled {{ 'selected' if not user.sex else '' }}>Select</option>
+                            <option value="Male" {{ 'selected' if user.sex == 'Male' else '' }}>Male</option>
+                            <option value="Female" {{ 'selected' if user.sex == 'Female' else '' }}>Female</option>
+                            <option value="Other" {{ 'selected' if user.sex == 'Other' else '' }}>Other</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your sex</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Health Information Section -->
+            <div class="form-section">
+                <h2 class="form-section-title"><i class="fas fa-heartbeat"></i>Health Information</h2>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label" for="weight">Weight (kg)</label>
+                        <input type="number" step="0.1" min="1" max="300" name="weight" id="weight" value="{{ user.weight or '' }}" placeholder="Weight in kg" required>
+                        <div class="invalid-feedback">Please enter a valid weight (1-300 kg)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="height">Height (cm)</label>
+                        <input type="number" step="0.1" min="50" max="250" name="height" id="height" value="{{ user.height or '' }}" placeholder="Height in cm" required>
+                        <div class="invalid-feedback">Please enter a valid height (50-250 cm)</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="allergies">Allergies (Optional)</label>
+                    <textarea name="allergies" id="allergies" rows="2" placeholder="List any allergies, separated by commas">{{ user.allergies or '' }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="medications">Current Medications (Optional)</label>
+                    <textarea name="medications" id="medications" rows="2" placeholder="List any medications you're currently taking">{{ user.medications or '' }}</textarea>
+                </div>
+            </div>
+            
+            <!-- Contact Information Section -->
+            <div class="form-section">
+                <h2 class="form-section-title"><i class="fas fa-address-card"></i>Contact Information</h2>
+                
+                <div class="form-group">
+                    <label class="form-label" for="phone">Phone Number</label>
+                    <input type="tel" name="phone" id="phone" value="{{ user.phone or '' }}" placeholder="Phone number" required>
+                    <div class="invalid-feedback">Please enter a valid phone number</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="address">Address</label>
+                    <textarea name="address" id="address" rows="2" placeholder="Your address" required>{{ user.address or '' }}</textarea>
+                    <div class="invalid-feedback">Please enter your address</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="emergency_contact">Emergency Contact (Optional)</label>
+                    <input type="text" name="emergency_contact" id="emergency_contact" value="{{ user.emergency_contact or '' }}" placeholder="Name and phone number">
+                </div>
+            </div>
+            
+            <div class="flex flex-col space-y-2">
+                <button type="submit"><i class="fas fa-save mr-2"></i>Save Changes</button>
+                <button type="button" id="reset-form" class="btn-secondary"><i class="fas fa-undo mr-2"></i>Reset Form</button>
+            </div>
+        </form>
+        
+        <div class="flex justify-between mt-4">
+            <a href="{{ url_for('patient_dashboard') }}"><i class="fas fa-arrow-left mr-2"></i>Back to Dashboard</a>
+            <a href="{{ url_for('data_privacy', user_id=user.id) }}"><i class="fas fa-shield-alt mr-2"></i>Privacy Settings</a>
+        </div>
+        
+        {% if user.last_updated %}
+        <div class="last-updated">
+            <i class="fas fa-clock mr-1"></i>Last updated: {{ user.last_updated.strftime('%Y-%m-%d %H:%M') }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Form validation
+        document.getElementById('profile-form').addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Validate required fields
+            const requiredFields = this.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            // Validate specific fields
+            const age = document.getElementById('age');
+            if (age.value && (parseInt(age.value) < 1 || parseInt(age.value) > 120)) {
+                age.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            const weight = document.getElementById('weight');
+            if (weight.value && (parseFloat(weight.value) < 1 || parseFloat(weight.value) > 300)) {
+                weight.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            const height = document.getElementById('height');
+            if (height.value && (parseFloat(height.value) < 50 || parseFloat(height.value) > 250)) {
+                height.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Phone validation - simple check for numeric values
+            const phone = document.getElementById('phone');
+            if (phone.value && !/^[0-9+\-\s()]{8,15}$/.test(phone.value)) {
+                phone.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+        
+        // Reset form to last saved state
+        document.getElementById('reset-form').addEventListener('click', function() {
+            if (confirm('Reset form to last saved values?')) {
+                window.location.reload();
+            }
+        });
+        
+        // Real-time validation feedback
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                if (this.hasAttribute('required') && this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

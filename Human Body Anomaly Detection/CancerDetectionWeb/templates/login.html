@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - HealthSync</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💉</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #4b6cb7 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Add background wave effect like on landing page */
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234b6cb7" fill-opacity="0.2" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,85.3C672,75,768,85,864,106.7C960,128,1056,160,1152,176C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+            background-size: cover;
+            z-index: 0;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 3.5rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo i {
+            animation: pulse 2s infinite;
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        h1 {
+            margin-bottom: 2rem !important;
+            font-size: 1.5rem !important;
+        }
+        
+        form {
+            margin-top: 3rem !important;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        
+        input {
+            width: 100%;
+            padding: 1.15rem 1.5rem;
+            margin-bottom: 0;
+            border: 2px solid rgba(147, 197, 253, 0.5);
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            outline: none;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        input:focus {
+            border-color: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        button {
+            width: 100%;
+            padding: 1.15rem;
+            background: #4ade80;
+            color: #1e3a8a;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            background: #22c55e;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+            display: block;
+            margin-top: 2.5rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 1.05rem;
+        }
+        
+        a:hover {
+            color: #4ade80;
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+        
+        .back-to-home {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            color: white;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 20;
+            transition: all 0.3s ease;
+        }
+        
+        .back-to-home:hover {
+            color: #4ade80;
+            transform: translateX(-3px);
+        }
+        
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .login-container {
+                margin: 0 1.5rem;
+                padding: 2.75rem 2.25rem;
+            }
+            
+            .logo {
+                font-size: 2.2rem;
+            }
+            
+            h1 {
+                font-size: 1.35rem !important;
+            }
+            
+            input, button, a {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('landing') }}" class="back-to-home">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+    
+    <div class="login-container">
+        <div class="logo-container">
+            <div class="logo">
+                <i class="fas fa-heartbeat"></i> HealthSync
+            </div>
+        </div>
+        
+        <h1 class="text-xl font-bold">Welcome Back</h1>
+        
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        
+        <form method="POST" action="" class="mt-8">
+            <div class="input-group">
+                <input type="email" name="email" placeholder="Email Address" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit">Login</button>
+            
+            <div class="mt-4 text-center">
+                <a href="{{ url_for('forgot_password') }}" class="text-base">Forgot Password?</a>
+            </div>
+        </form>
+        
+        <a href="{{ url_for('signup') }}">Don't have an account? Sign up now</a>
+    </div>
+</body>
+</html>

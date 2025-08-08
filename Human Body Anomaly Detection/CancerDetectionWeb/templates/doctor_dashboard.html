@@ -1,0 +1,3052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - HealthSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Added Chart.js for analytics visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Added date-fns for date operations -->
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <!-- Added jsPDF for report generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #4b6cb7 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #4ade80;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .search-box {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 2px solid #93c5fd;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #4ade80;
+            color: #1e3a8a;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        button:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .patient-list {
+            margin-top: 1.5rem;
+        }
+        .patient-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: #4ade80;
+        }
+        .chat-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+        }
+        .chat-messages {
+            height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.5rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+        .chat-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .chat-form input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 2px solid #93c5fd;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .chat-form input:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .chat-form button {
+            padding: 0.75rem 1rem;
+            background: #3b82f6;
+        }
+        .stats-card {
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            flex-grow: 1;
+            min-width: 180px;
+            text-align: center;
+        }
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+        .stats-label {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .badge-positive {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+        }
+        .badge-negative {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #bbf7d0;
+        }
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+            max-width: 80%;
+            position: relative;
+            line-height: 1.4;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        .doctor-message {
+            background: #4ade80;
+            color: #1e293b;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+            margin-left: auto;
+        }
+        .patient-message {
+            background: #93c5fd;
+            color: #1e293b;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .filter-option {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .filter-option:hover,
+        .filter-option.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .nav-pill {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-pill:hover, .nav-pill.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: #1e3a8a;
+            min-width: 160px;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            display: block;
+            color: white;
+        }
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        /* New CSS for analytics and advanced features */
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+        .tab.active {
+            border-bottom: 3px solid #4ade80;
+            color: #4ade80;
+        }
+        .tab:hover:not(.active) {
+            border-bottom: 3px solid rgba(255, 255, 255, 0.3);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            height: 340px;
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-container.pie-chart {
+            height: 380px;
+        }
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .risk-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        .risk-high {
+            background-color: #ef4444;
+        }
+        .risk-medium {
+            background-color: #f59e0b;
+        }
+        .risk-low {
+            background-color: #10b981;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .treatment-tracker {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin: 1rem 0;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+        .timeline-item:after {
+            content: '';
+            position: absolute;
+            left: -1.95rem;
+            top: 0.5rem;
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .timeline-item:last-child:after {
+            display: none;
+        }
+        .ai-recommendation {
+            background: rgba(79, 70, 229, 0.2);
+            border-left: 4px solid #4f46e5;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+        }
+        /* Add responsive grid adjustments */
+        @media (max-width: 1200px) {
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+    <script>
+        function formatTimeToIST(timestamp) {
+            const date = new Date(timestamp);
+            // Convert to IST (UTC+5:30)
+            const options = { 
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return date.toLocaleString('en-IN', options);
+        }
+    
+        function loadChat(patientId) {
+            fetch(`/get_chat_logs/${patientId}`, { credentials: 'include' })
+                .then(response => {
+                    if (response.status === 401 || response.status === 403) {
+                        console.log("Unauthorized or access denied, stopping chat load.");
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+                    const chatDiv = document.getElementById(`chat-messages-${patientId}`);
+                    chatDiv.innerHTML = '';
+                    data.chat_logs.forEach(log => {
+                        const isDoctor = log.sender === document.getElementById('user-name').textContent.trim();
+                        
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = `message-bubble ${isDoctor ? 'doctor-message' : 'patient-message'}`;
+                        
+                        const senderSpan = document.createElement('div');
+                        senderSpan.className = 'font-medium';
+                        senderSpan.textContent = log.sender;
+                        
+                        const messageText = document.createElement('div');
+                        messageText.textContent = log.message;
+                        
+                        const timeSpan = document.createElement('div');
+                        timeSpan.className = 'message-time';
+                        timeSpan.textContent = formatTimeToIST(log.timestamp);
+                        
+                        msgDiv.appendChild(senderSpan);
+                        msgDiv.appendChild(messageText);
+                        msgDiv.appendChild(timeSpan);
+                        
+                        chatDiv.appendChild(msgDiv);
+                    });
+                    
+                    // Scroll to bottom
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+                    
+                    // Update last message time in patient list
+                    if(data.chat_logs.length > 0) {
+                        const lastMessage = data.chat_logs[data.chat_logs.length - 1];
+                        const lastMessageTime = document.getElementById(`last-message-time-${patientId}`);
+                        if(lastMessageTime) {
+                            lastMessageTime.textContent = `Last message: ${formatTimeToIST(lastMessage.timestamp)}`;
+                        }
+                    }
+                })
+                .catch(error => console.error("Error fetching chat logs:", error));
+        }
+
+        window.onload = function() {
+            // Get user role and name
+            const isDoctor = document.getElementById('user-role').getAttribute('data-is-doctor') === 'true';
+            const doctorName = document.getElementById('user-name').textContent.trim();
+            
+            if (isDoctor) {
+                // Display welcome notification
+                showWelcomeMessage(doctorName);
+                
+                // Load real-time data and initialize dashboard
+                loadRealTimeData();
+                
+                // Set up chat refresh and other functionality
+                const patientIds = Array.from(document.querySelectorAll('[id^="chat-messages-"]')).map(div => div.id.split('-')[2]);
+                patientIds.forEach(id => {
+                    loadChat(id); // Load initial chat
+                    setInterval(() => loadChat(id), 5000); // Refresh every 5 seconds
+                });
+                
+                // Set up patient filtering
+                setupFiltering();
+            } else {
+                console.log("Chat loading disabled: User is not a doctor or not logged in.");
+            }
+        };
+        
+        // Show welcome message notification
+        function showWelcomeMessage(doctorName) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg z-50 animate-fadeIn';
+            notification.style.maxWidth = '320px';
+            
+            // Get current time and format it
+            const now = new Date();
+            const hours = now.getHours();
+            let greeting = 'Good morning';
+            if (hours >= 12 && hours < 18) greeting = 'Good afternoon';
+            else if (hours >= 18) greeting = 'Good evening';
+            
+            notification.innerHTML = `
+                <div class="flex items-start">
+                    <div class="mr-3 text-2xl"><i class="fas fa-user-md"></i></div>
+                    <div>
+                        <h4 class="font-bold">${greeting}, Dr. ${doctorName || 'Doctor'}</h4>
+                        <p class="mt-1 text-sm">Welcome to your dashboard. You have real-time updates on patient data and AI assistance ready for you.</p>
+                        <div class="mt-2 text-xs">
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-circle text-xs mr-1 text-green-300"></i> Real-time data active
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Append to body
+            document.body.appendChild(notification);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('animate-fadeOut');
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
+        }
+        
+        // Load real-time data for charts and patient management
+        function loadRealTimeData() {
+            // Fetch analytics data for charts
+            fetchAnalyticsData();
+            
+            // Set up auto-refresh interval for analytics
+            setInterval(fetchAnalyticsData, 30000); // Refresh every 30 seconds
+        }
+        
+        // Fetch analytics data and update charts
+        function fetchAnalyticsData() {
+            fetch('/api/analytics/summary')
+                .then(response => response.json())
+                .then(data => {
+                    // Update charts with real-time data
+                    updateDiseaseDistributionChart(data.diseaseDistribution);
+                    updateWeeklyTrendChart(data.weeklyTrends);
+                    updateAgeDistributionChart(data.ageDistribution);
+                    
+                    // Update stats cards with real-time counts
+                    updateStatsCounts(data);
+                    
+                    // Update last update time
+                    const lastUpdateElement = document.getElementById('last-update-time');
+                    if (lastUpdateElement) {
+                        const updateDate = new Date(data.lastUpdated || new Date());
+                        lastUpdateElement.innerHTML = `<i class="fas fa-sync-alt mr-1"></i> Last updated: ${updateDate.toLocaleTimeString()} | <span class="text-green-300"><i class="fas fa-circle text-xs mr-1"></i>Real-time data</span>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching analytics data:', error);
+                    // If error, try to create charts with static data as fallback
+                    createChartsWithPlaceholderData();
+                });
+        }
+        
+        // Update stats counts with real-time data
+        function updateStatsCounts(data) {
+            // Update total patients count
+            const patientCountElement = document.getElementById('total-patients-count');
+            if (patientCountElement) {
+                patientCountElement.textContent = data.totalPatients || 0;
+            }
+            
+            // Update positive results count
+            const positiveCountElement = document.getElementById('positive-count');
+            if (positiveCountElement) {
+                positiveCountElement.textContent = data.positiveResults || 0;
+            }
+            
+            // Update negative results count
+            const negativeCountElement = document.getElementById('negative-count');
+            if (negativeCountElement) {
+                negativeCountElement.textContent = data.negativeResults || 0;
+            }
+            
+            // Update today's scans count - this would be derived from weekly data
+            const todayScansElement = document.getElementById('today-scans-count');
+            if (todayScansElement && data.weeklyTrends && data.weeklyTrends.length > 0) {
+                const latestWeek = data.weeklyTrends[data.weeklyTrends.length - 1];
+                const todayScans = latestWeek.positive + latestWeek.negative;
+                todayScansElement.textContent = todayScans;
+            }
+        }
+        
+        // Update disease distribution chart with real-time data
+        function updateDiseaseDistributionChart(diseaseData) {
+            const ctx = document.getElementById('diseaseDistributionChart');
+            if (!ctx) return;
+            
+            // Check if chart already exists
+            const chartInstance = Chart.getChart(ctx);
+            if (chartInstance) {
+                // Update existing chart
+                chartInstance.data.datasets[0].data = [
+                    diseaseData.fracture.positive,
+                    diseaseData.fracture.negative,
+                    diseaseData.tb.positive,
+                    diseaseData.tb.negative
+                ];
+                chartInstance.update();
+            } else {
+                // Create new chart
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Fracture Positive', 'Fracture Negative', 'TB Positive', 'TB Negative'],
+                        datasets: [{
+                            data: [
+                                diseaseData.fracture.positive,
+                                diseaseData.fracture.negative,
+                                diseaseData.tb.positive,
+                                diseaseData.tb.negative
+                            ],
+                            backgroundColor: [
+                                'rgba(239, 68, 68, 0.7)',
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(59, 130, 246, 0.7)'
+                            ],
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: '#fff',
+                                    font: {
+                                        family: 'Inter'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update weekly trend chart with real-time data
+        function updateWeeklyTrendChart(weeklyData) {
+            const ctx = document.getElementById('weeklyTrendChart').getContext('2d');
+            if (!ctx) return;
+            
+            // Extract data from API response
+            const weeks = weeklyData.map(w => w.week);
+            const positiveData = weeklyData.map(w => w.positive);
+            const negativeData = weeklyData.map(w => w.negative);
+            
+            // Check if chart already exists
+            const chartInstance = Chart.getChart(ctx);
+            if (chartInstance) {
+                // Update existing chart
+                chartInstance.data.labels = weeks;
+                chartInstance.data.datasets[0].data = positiveData;
+                chartInstance.data.datasets[1].data = negativeData;
+                chartInstance.update();
+            } else {
+                // Create new chart
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: weeks,
+                        datasets: [
+                            {
+                                label: 'Positive Results',
+                                data: positiveData,
+                                borderColor: 'rgba(239, 68, 68, 0.7)',
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                tension: 0.2,
+                                fill: true
+                            },
+                            {
+                                label: 'Negative Results',
+                                data: negativeData,
+                                borderColor: 'rgba(16, 185, 129, 0.7)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                tension: 0.2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#fff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#fff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#fff',
+                                    font: {
+                                        family: 'Inter'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update age distribution chart with real-time data
+        function updateAgeDistributionChart(ageData) {
+            const ctx = document.getElementById('ageDistributionChart').getContext('2d');
+            if (!ctx) return;
+            
+            // Extract data for chart
+            const ageGroups = Object.keys(ageData);
+            const counts = Object.values(ageData);
+            
+            // Check if chart already exists
+            const chartInstance = Chart.getChart(ctx);
+            if (chartInstance) {
+                // Update existing chart
+                chartInstance.data.labels = ageGroups;
+                chartInstance.data.datasets[0].data = counts;
+                chartInstance.update();
+            } else {
+                // Create new chart
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ageGroups,
+                        datasets: [{
+                            label: 'Number of Patients',
+                            data: counts,
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.7)',
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(239, 68, 68, 0.7)'
+                            ],
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.3)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0,
+                                    color: '#fff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#fff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Make AI recommendations dynamic based on scan data
+        function updateAIRecommendations(patientId, scanId) {
+            if (!patientId || !scanId) return;
+            
+            // Show loading indicator
+            document.getElementById('ai-loading-indicator').classList.remove('hidden');
+            document.getElementById('ai-recommendation-container').classList.add('hidden');
+            
+            // Fetch AI recommendations from API
+            fetch(`/api/ai_recommendations/${patientId}/${scanId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    document.getElementById('ai-loading-indicator').classList.add('hidden');
+                    document.getElementById('ai-recommendation-container').classList.remove('hidden');
+                    
+                    // Update last refresh time
+                    document.getElementById('ai-last-update-time').innerHTML = 
+                        `<i class="fas fa-circle text-xs mr-1"></i> Updated: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Update diagnosis
+                    document.getElementById('ai-diagnosis').innerHTML = `
+                        <div>
+                            <span class="font-medium">Disease:</span> ${data.diagnosis.disease.charAt(0).toUpperCase() + data.diagnosis.disease.slice(1)}
+                        </div>
+                        <div>
+                            <span class="font-medium">Result:</span> 
+                            <span class="${data.diagnosis.result === 'Positive' || data.diagnosis.result === 'Tuberculosis' ? 'text-red-300' : 'text-green-300'}">
+                                ${data.diagnosis.result}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Confidence:</span> ${data.diagnosis.confidence}
+                        </div>
+                        <div class="mt-2">
+                            <span class="font-medium">Follow-up:</span> ${data.follow_up_recommendation}
+                        </div>
+                    `;
+                    
+                    // Update risk badge
+                    const riskBadge = document.getElementById('risk-badge');
+                    let riskClass = '';
+                    
+                    switch(data.diagnosis.risk_category) {
+                        case 'High':
+                            riskClass = 'bg-red-500/20 text-red-100';
+                            break;
+                        case 'Medium':
+                            riskClass = 'bg-yellow-500/20 text-yellow-100';
+                            break;
+                        default:
+                            riskClass = 'bg-green-500/20 text-green-100';
+                    }
+                    
+                    riskBadge.className = `ml-3 px-3 py-1 rounded-full text-xs font-medium ${riskClass}`;
+                    riskBadge.textContent = `${data.diagnosis.risk_category} Risk (Score: ${data.diagnosis.risk_score})`;
+                    
+                    // Update risk factors
+                    const riskFactorsDiv = document.getElementById('risk-factors');
+                    if (data.diagnosis.risk_factors && data.diagnosis.risk_factors.length > 0) {
+                        let riskFactorsHtml = '<ul class="list-disc pl-5 space-y-1">';
+                        data.diagnosis.risk_factors.forEach(factor => {
+                            riskFactorsHtml += `<li>${factor}</li>`;
+                        });
+                        riskFactorsHtml += '</ul>';
+                        riskFactorsDiv.innerHTML = riskFactorsHtml;
+                    } else {
+                        riskFactorsDiv.innerHTML = '<div class="text-sm">No significant risk factors identified</div>';
+                    }
+                    
+                    // Update treatment suggestions
+                    const treatmentList = document.getElementById('ai-treatment-suggestions');
+                    treatmentList.innerHTML = '';
+                    
+                    if (data.treatment_suggestions && data.treatment_suggestions.length > 0) {
+                        data.treatment_suggestions.forEach(treatment => {
+                            const li = document.createElement('li');
+                            li.textContent = treatment;
+                            treatmentList.appendChild(li);
+                        });
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'No specific treatment suggestions available';
+                        treatmentList.appendChild(li);
+                    }
+                    
+                    // Update similar cases
+                    const similarCasesDiv = document.getElementById('ai-similar-cases');
+                    if (data.similar_cases && data.similar_cases.length > 0) {
+                        let casesHtml = '';
+                        data.similar_cases.forEach((caseData, index) => {
+                            casesHtml += `
+                                <div class="mb-2 ${index > 0 ? 'mt-3 pt-3 border-t border-white/10' : ''}">
+                                    <div><span class="font-medium">Case ID:</span> ${caseData.id}</div>
+                                    <div><span class="font-medium">Similarity:</span> ${caseData.similarity}</div>
+                                    <div><span class="font-medium">Outcome:</span> ${caseData.outcome}</div>
+                                    <div><span class="font-medium">Recovery Time:</span> ${getRecoveryTime(data.diagnosis.disease, data.diagnosis.risk_category)}</div>
+                                    <div><span class="font-medium">Treatment Effectiveness:</span> ${caseData.treatment_effectiveness}</div>
+                                </div>
+                            `;
+                        });
+                        similarCasesDiv.innerHTML = casesHtml;
+                    } else {
+                        similarCasesDiv.innerHTML = 'No similar cases found in the database';
+                    }
+                    
+                    // Load treatment timeline
+                    loadTreatmentTimeline(patientId, scanId, data.diagnosis);
+                    
+                    // Load heatmap visualization for this scan
+                    loadDoctorHeatmap(scanId);
+                })
+                .catch(error => {
+                    console.error('Error fetching AI recommendations:', error);
+                    document.getElementById('ai-loading-indicator').classList.add('hidden');
+                    document.getElementById('ai-recommendation-container').classList.remove('hidden');
+                    document.getElementById('ai-diagnosis').innerHTML = 'Error loading AI recommendations. Please try again.';
+                });
+        }
+        
+        // Function to load heatmap for doctor view
+        function loadDoctorHeatmap(scanId) {
+            if (!scanId) return;
+            
+            // Show loading state for heatmap
+            document.getElementById('doctor-heatmap-loading').classList.remove('hidden');
+            document.getElementById('doctor-heatmap-display').classList.add('hidden');
+            
+            // Fetch heatmap data from API
+            fetch(`/api/patient/heatmap/${scanId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading state
+                    document.getElementById('doctor-heatmap-loading').classList.add('hidden');
+                    document.getElementById('doctor-heatmap-display').classList.remove('hidden');
+                    
+                    // Set images
+                    const originalImage = document.getElementById('doctor-original-scan-image');
+                    const heatmapImage = document.getElementById('doctor-heatmap-image');
+                    
+                    if (!data.filename) {
+                        // If no scan image available, show placeholder
+                        originalImage.src = `https://via.placeholder.com/400x400.png?text=${data.disease.toUpperCase()}+Scan`;
+                        heatmapImage.src = `https://via.placeholder.com/400x400.png?text=Heatmap+Not+Available`;
+                    } else {
+                        // Use the separate original and heatmap images
+                        originalImage.src = data.original_filename ? 
+                            `/uploads/${data.original_filename}` : 
+                            `/uploads/${data.filename}`;
+                            
+                        heatmapImage.src = data.heatmap_filename ? 
+                            `/uploads/${data.heatmap_filename}` : 
+                            `/uploads/heatmap_${data.filename}`;
+                    }
+                    
+                    // Set analysis breakdown
+                    const analysisElement = document.getElementById('doctor-heatmap-analysis');
+                    analysisElement.innerHTML = '';
+                    
+                    // Add analysis points
+                    if (data.analysis && data.analysis.length > 0) {
+                        data.analysis.forEach(point => {
+                            const li = document.createElement('li');
+                            li.textContent = point;
+                            analysisElement.appendChild(li);
+                        });
+                    } else if (data.features) {
+                        // Use features if analysis not available
+                        for (const [key, feature] of Object.entries(data.features)) {
+                            const li = document.createElement('li');
+                            li.textContent = `${key.replace('_', ' ')}: ${feature.interpretation}`;
+                            analysisElement.appendChild(li);
+                        }
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'No detailed analysis available for this scan.';
+                        analysisElement.appendChild(li);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching heatmap data:', error);
+                    document.getElementById('doctor-heatmap-loading').classList.add('hidden');
+                    
+                    // Show error message
+                    const errorContainer = document.getElementById('doctor-heatmap-container');
+                    errorContainer.innerHTML = `
+                        <div class="text-center py-6">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-4 text-red-400"></i>
+                            <p>Error loading heatmap data. Please try again.</p>
+                            <p class="text-sm text-blue-200 mt-2">${error.message}</p>
+                        </div>
+                    `;
+                });
+        }
+        
+        // Get estimated recovery time based on disease and risk category
+        function getRecoveryTime(disease, riskCategory) {
+            // Calculate recovery time dynamically based on disease and risk
+            let baseTime = 0;
+            let timeRange = '';
+            
+            if (disease === 'fracture') {
+                switch(riskCategory) {
+                    case 'High':
+                        baseTime = 12;
+                        timeRange = `${baseTime}-16 weeks`;
+                        break;
+                    case 'Medium':
+                        baseTime = 8;
+                        timeRange = `${baseTime}-12 weeks`;
+                        break;
+                    default: // Low risk
+                        baseTime = 6;
+                        timeRange = `${baseTime}-8 weeks`;
+                }
+            } else if (disease === 'tb') {
+                switch(riskCategory) {
+                    case 'High':
+                        baseTime = 9;
+                        timeRange = `${baseTime}-12 months`;
+                        break;
+                    case 'Medium':
+                        baseTime = 6;
+                        timeRange = `${baseTime}-9 months`;
+                        break;
+                    default: // Low risk
+                        baseTime = 6;
+                        timeRange = `${baseTime} months`;
+                }
+            } else {
+                timeRange = "Unknown";
+            }
+            
+            return timeRange;
+        }
+        
+        // Load treatment timeline based on patient, scan and diagnosis
+        function loadTreatmentTimeline(patientId, scanId, diagnosis) {
+            const timeline = document.getElementById('treatment-timeline');
+            
+            // Get today's date for reference
+            const today = new Date();
+            
+            // Calculate time periods based on diagnosis
+            const isHigh = diagnosis && diagnosis.risk_category === 'High';
+            const isMedium = diagnosis && diagnosis.risk_category === 'Medium';
+            const isFracture = diagnosis && diagnosis.disease === 'fracture';
+            const isTB = diagnosis && diagnosis.disease === 'tb';
+            
+            // Create timeline items dynamically based on diagnosis
+            const timelineItems = [];
+            
+            // Initial diagnosis (past)
+            timelineItems.push({
+                title: 'Initial Diagnosis',
+                date: new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000),
+                description: isFracture 
+                    ? `X-ray confirms ${diagnosis.result.toLowerCase()} fracture` 
+                    : `Chest X-ray shows ${diagnosis.result.toLowerCase()} for tuberculosis`
+            });
+            
+            // Treatment started (past)
+            timelineItems.push({
+                title: 'Treatment Started',
+                date: new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000),
+                description: isFracture
+                    ? (diagnosis.result === 'Positive' 
+                        ? 'Cast applied, pain medication prescribed' 
+                        : 'Preventive care instructions provided')
+                    : (diagnosis.result === 'Tuberculosis' 
+                        ? 'TB medication regimen initiated, isolation protocols advised' 
+                        : 'Preventive measures and monitoring recommended')
+            });
+            
+            // Follow-up appointment (future - timing varies by risk level)
+            const followUpDays = isHigh ? 7 : (isMedium ? 14 : 30);
+            timelineItems.push({
+                title: 'Follow-up Appointment',
+                date: new Date(today.getTime() + followUpDays * 24 * 60 * 60 * 1000),
+                description: 'Scheduled for review and progress assessment'
+            });
+            
+            // For high risk patients, add more frequent monitoring
+            if (isHigh) {
+                timelineItems.push({
+                    title: 'Additional Monitoring',
+                    date: new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000),
+                    description: isFracture 
+                        ? 'Secondary imaging to verify healing progress' 
+                        : 'Lab tests to monitor response to treatment'
+                });
+            }
+            
+            // Expected recovery or reassessment time
+            const recoveryWeeks = isFracture 
+                ? (isHigh ? 12 : (isMedium ? 8 : 6)) 
+                : (isHigh ? 24 : (isMedium ? 16 : 12));
+            
+            timelineItems.push({
+                title: isFracture ? 'Expected Recovery' : 'Major Reassessment',
+                date: new Date(today.getTime() + recoveryWeeks * 7 * 24 * 60 * 60 * 1000),
+                description: isFracture 
+                    ? 'Anticipated full recovery if treatment plan followed' 
+                    : 'Comprehensive evaluation of treatment effectiveness'
+            });
+            
+            // Clear timeline and add new items
+            timeline.innerHTML = '';
+            timelineItems.forEach(item => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                
+                timelineItem.innerHTML = `
+                    <div class="font-medium">${item.title}</div>
+                    <div class="text-sm text-blue-200">${item.date.toISOString().split('T')[0]}</div>
+                    <div class="mt-1">${item.description}</div>
+                `;
+                
+                timeline.appendChild(timelineItem);
+            });
+        }
+        
+        function setupFiltering() {
+            const filterOptions = document.querySelectorAll('.filter-option');
+            const patientCards = document.querySelectorAll('.patient-card');
+            
+            filterOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Toggle active class
+                    filterOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const filter = this.getAttribute('data-filter');
+                    
+                    // Apply filtering
+                    patientCards.forEach(card => {
+                        if (filter === 'all') {
+                            card.style.display = 'block';
+                        } else {
+                            const hasResult = card.querySelector(`.badge-${filter}`);
+                            card.style.display = hasResult ? 'block' : 'none';
+                        }
+                    });
+                    
+                    // Update count
+                    updateVisiblePatientsCount();
+                });
+            });
+        }
+        
+        function updateVisiblePatientsCount() {
+            const visiblePatients = document.querySelectorAll('.patient-card[style="display: block;"]').length;
+            document.getElementById('visible-patients-count').textContent = visiblePatients;
+        }
+        
+        function toggleDarkMode() {
+            // Send request to toggle dark mode
+            fetch('/toggle_dark_mode?next=' + window.location.pathname)
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                });
+        }
+        
+        // Tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to current tab and content
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // Initialize charts if analytics tab is selected
+                    if (tabId === 'analytics-tab') {
+                        initializeCharts();
+                    }
+                });
+            });
+            
+            // Initialize the AI Assistant patient selector
+            const patientSelector = document.getElementById('ai-patient-selector');
+            if (patientSelector) {
+                patientSelector.addEventListener('change', function() {
+                    loadPatientScans(this.value);
+                });
+            }
+            
+            // Set treatment tracker dates
+            setTreatmentDates();
+        });
+        
+        // Charts initialization
+        function initializeCharts() {
+            // Fetch real-time analytics data
+            fetch('/api/analytics/summary')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Analytics data:', data);
+                    
+                    // Update last update time
+                    if (data.lastUpdated) {
+                        const lastUpdateElement = document.getElementById('last-update-time');
+                        const updateDate = new Date(data.lastUpdated);
+                        lastUpdateElement.innerHTML = `<i class="fas fa-clock mr-1"></i> Last updated: ${updateDate.toLocaleTimeString()} | <span class="text-green-300"><i class="fas fa-circle text-xs mr-1"></i>Real-time data</span>`;
+                    }
+                    
+                    createDiseaseDistributionChart(data);
+                    createWeeklyTrendChart(data.weeklyTrends);
+                    createAgeDistributionChart(data.ageDistribution);
+                    createConfidenceAnalysisChart(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching analytics data:', error);
+                    // Create charts with placeholder data if API fails
+                    createChartsWithPlaceholderData();
+                    
+                    // Update last update time to show error
+                    const lastUpdateElement = document.getElementById('last-update-time');
+                    lastUpdateElement.innerHTML = `<i class="fas fa-exclamation-triangle text-red-400 mr-1"></i> Error loading data. Using sample data.`;
+                });
+        }
+        
+        function createDiseaseDistributionChart(data) {
+            const diseaseCtx = document.getElementById('diseaseDistributionChart').getContext('2d');
+            
+            // Create real data from the API response
+            const positiveData = [];
+            const labels = [];
+            
+            if (data.diseaseDistribution.fracture) {
+                labels.push('Fracture');
+                positiveData.push(data.diseaseDistribution.fracture.positive);
+            }
+            
+            if (data.diseaseDistribution.tuberculosis || data.diseaseDistribution.tb) {
+                labels.push('Tuberculosis');
+                positiveData.push((data.diseaseDistribution.tuberculosis || data.diseaseDistribution.tb).positive);
+            }
+            
+            // Add total negative results
+            labels.push('Healthy');
+            positiveData.push(data.negativeResults);
+            
+            new Chart(diseaseCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: positiveData,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',    // Red for Fracture
+                            'rgba(245, 158, 11, 0.7)',   // Orange/Yellow for Tuberculosis
+                            'rgba(59, 130, 246, 0.7)'    // Blue for Healthy
+                        ],
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'white',
+                                font: {
+                                    size: 14
+                                },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Disease Distribution (Real-time)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            bottom: 10
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createWeeklyTrendChart(weeklyTrends) {
+            const trendCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+            
+            // Extract data from API response
+            const labels = weeklyTrends.map(week => week.week);
+            const positiveData = weeklyTrends.map(week => week.positive);
+            const negativeData = weeklyTrends.map(week => week.negative);
+            
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Positive Cases',
+                        data: positiveData,
+                        borderColor: 'rgba(239, 68, 68, 0.7)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }, {
+                        label: 'Negative Cases',
+                        data: negativeData,
+                        borderColor: 'rgba(16, 185, 129, 0.7)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 70, // Add maximum scale to match the image
+                            ticks: {
+                                color: 'white',
+                                stepSize: 10 // Add step size to create consistent intervals
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Weekly Diagnosis Trends (Real-time)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createAgeDistributionChart(ageData) {
+            const ageCtx = document.getElementById('ageDistributionChart').getContext('2d');
+            
+            // Extract age data from API response
+            const labels = Object.keys(ageData);
+            const counts = Object.values(ageData);
+            
+            new Chart(ageCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Patient Count',
+                        data: counts,
+                        backgroundColor: 'rgba(79, 70, 229, 0.7)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'white',
+                                precision: 0 // Ensure whole numbers for patient counts
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Patient Age Distribution (Real-time)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createConfidenceAnalysisChart(data) {
+            const confidenceCtx = document.getElementById('confidenceAnalysisChart').getContext('2d');
+            
+            // Default values in case API data is missing
+            let metrics = {
+                fracture_detection: 85,
+                tb_detection: 78,
+                false_positive_rate: 15,
+                false_negative_rate: 8,
+                overall_accuracy: 88
+            };
+            
+            // Use real metrics if available
+            if (data && data.accuracyMetrics) {
+                metrics = data.accuracyMetrics;
+            }
+            
+            new Chart(confidenceCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Fracture Detection', 'TB Detection', 'False Negative Rate', 'False Positive Rate', 'Overall Accuracy'],
+                    datasets: [{
+                        label: 'Model Confidence (%)',
+                        data: [
+                            metrics.fracture_detection,
+                            metrics.tb_detection,
+                            metrics.false_negative_rate,
+                            metrics.false_positive_rate,
+                            metrics.overall_accuracy
+                        ],
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderColor: 'rgba(16, 185, 129, 0.7)',
+                        pointBackgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(16, 185, 129, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            pointLabels: {
+                                color: 'white',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                color: 'white',
+                                stepSize: 20,
+                                showLabelBackdrop: false
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: 'white'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Model Confidence Analysis (Real-time)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.raw + '%';
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createChartsWithPlaceholderData() {
+            // Fallback function if API fails
+            const diseaseCtx = document.getElementById('diseaseDistributionChart').getContext('2d');
+            new Chart(diseaseCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Fracture', 'Tuberculosis', 'Healthy'],
+                    datasets: [{
+                        data: [25, 15, 60],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',    // Red for Fracture
+                            'rgba(245, 158, 11, 0.7)',   // Orange/Yellow for Tuberculosis
+                            'rgba(59, 130, 246, 0.7)'    // Blue for Healthy
+                        ],
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'white',
+                                font: {
+                                    size: 14
+                                },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Disease Distribution (Sample Data)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            bottom: 10
+                        }
+                    }
+                }
+            });
+            
+            // Create other placeholder charts similarly
+            // Weekly trend chart with placeholder data
+            const trendCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Positive Cases',
+                        data: [5, 8, 6, 12],
+                        borderColor: 'rgba(239, 68, 68, 0.7)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }, {
+                        label: 'Negative Cases',
+                        data: [15, 12, 18, 14],
+                        borderColor: 'rgba(16, 185, 129, 0.7)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Weekly Trends (Sample Data)',
+                            color: 'white',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Age distribution chart with placeholder data
+            createAgeDistributionChart({
+                '18-30': 12,
+                '31-45': 19,
+                '46-60': 15,
+                '61+': 8
+            });
+            
+            // Confidence analysis chart with placeholder data
+            createConfidenceAnalysisChart();
+        }
+        
+        // Function to refresh analytics data
+        function refreshAnalytics() {
+            // Clear existing charts
+            const chartContainers = document.querySelectorAll('.chart-container');
+            chartContainers.forEach(container => {
+                const canvas = container.querySelector('canvas');
+                if (canvas) {
+                    canvas.remove();
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = canvas.id;
+                    container.appendChild(newCanvas);
+                }
+            });
+            
+            // Reinitialize charts with fresh data
+            initializeCharts();
+        }
+        
+        // Set up auto-refresh for real-time updates (every 60 seconds)
+        let analyticsRefreshInterval;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Other code...
+            
+            // Add auto-refresh for analytics when the tab is selected
+            document.querySelector('[data-tab="analytics-tab"]').addEventListener('click', function() {
+                // Clear any existing interval
+                if (analyticsRefreshInterval) {
+                    clearInterval(analyticsRefreshInterval);
+                }
+                
+                // Set up new refresh interval
+                analyticsRefreshInterval = setInterval(refreshAnalytics, 60000); // Refresh every 60 seconds
+            });
+            
+            // Clear interval when leaving analytics tab
+            document.querySelectorAll('.tab:not([data-tab="analytics-tab"])').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    if (analyticsRefreshInterval) {
+                        clearInterval(analyticsRefreshInterval);
+                        analyticsRefreshInterval = null;
+                    }
+                });
+            });
+        });
+        
+        // Generate reports
+        function generateReport(patientId) {
+            // In a real implementation, this would make an API call
+            // Here we'll simulate report generation client-side with jsPDF
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Find patient data
+            const patientName = document.querySelector(`[data-patient-id="${patientId}"] .patient-name`)?.textContent || 'Patient';
+            
+            // Add report header
+            doc.setFontSize(20);
+            doc.text('Patient Medical Report', 105, 20, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.text(`Patient: ${patientName}`, 20, 40);
+            doc.text(`Date: ${new Date().toISOString().split('T')[0]}`, 20, 50);
+            doc.text('Generated by: HealthSync System', 20, 60);
+            
+            // Add scan results section
+            doc.setFontSize(16);
+            doc.text('Diagnostic Scan Results', 20, 80);
+            
+            // Table for scan results
+            const tableData = [
+                ['Date', 'Disease', 'Result', 'Confidence'],
+                ['2023-05-15', 'Fracture', 'Negative', '92%'],
+                ['2023-06-20', 'Tuberculosis', 'Positive', '88%']
+            ];
+            
+            doc.autoTable({
+                head: [tableData[0]],
+                body: tableData.slice(1),
+                startY: 90,
+                theme: 'grid'
+            });
+            
+            // Add recommendations section
+            doc.setFontSize(16);
+            doc.text('Medical Recommendations', 20, 140);
+            
+            doc.setFontSize(12);
+            doc.text('1. Follow-up scan recommended in 2 weeks', 25, 155);
+            doc.text('2. Prescribed medication should be taken as directed', 25, 165);
+            doc.text('3. Maintain restricted physical activity for 4 weeks', 25, 175);
+            
+            // Add report footer
+            doc.setFontSize(10);
+            doc.text('This report is generated automatically and should be reviewed by a healthcare professional.', 20, 270);
+            
+            // Save the PDF
+            doc.save(`Patient_Report_${patientId}.pdf`);
+            
+            alert('Medical report generated successfully!');
+        }
+        
+        // Show AI Analysis
+        function showAIAnalysis(patientId) {
+            // Switch to AI tab
+            document.querySelector('[data-tab="ai-assist-tab"]').click();
+            
+            // Set the patient selector
+            const patientSelector = document.getElementById('ai-patient-selector');
+            if (patientSelector) {
+                patientSelector.value = patientId;
+                
+                // Trigger change to load scans
+                const event = new Event('change');
+                patientSelector.dispatchEvent(event);
+            }
+        }
+        
+        // Load patient scans
+        function loadPatientScans(patientId) {
+            if (!patientId) return;
+            
+            const scanSelector = document.getElementById('ai-scan-selector');
+            scanSelector.innerHTML = '<option value="">Loading scans...</option>';
+            
+            // Show loading state
+            document.getElementById('ai-recommendation-container').classList.add('hidden');
+            
+            // Fetch patient scans from the API
+            fetch(`/api/patients/${patientId}/scans`)
+                .then(response => response.json())
+                .then(data => {
+                    scanSelector.innerHTML = '<option value="">-- Select Scan --</option>';
+                    
+                    if (data.scans && data.scans.length > 0) {
+                        data.scans.forEach(scan => {
+                            const scanDate = new Date(scan.date).toLocaleDateString();
+                            const option = document.createElement('option');
+                            option.value = scan.id;
+                            option.textContent = `${scanDate} - ${scan.disease.charAt(0).toUpperCase() + scan.disease.slice(1)}`;
+                            scanSelector.appendChild(option);
+                        });
+                        
+                        // Add event listener to scan selector
+                        scanSelector.addEventListener('change', function() {
+                            if (this.value) {
+                                updateAIRecommendations(patientId, this.value);
+                            } else {
+                                document.getElementById('ai-recommendation-container').classList.add('hidden');
+                            }
+                        });
+                    } else {
+                        scanSelector.innerHTML = '<option value="">No scans available for this patient</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching patient scans:', error);
+                    scanSelector.innerHTML = '<option value="">Error loading scans</option>';
+                });
+        }
+        
+        // Update AI recommendations
+        function updateAIRecommendations(patientId, scanId) {
+            if (!patientId || !scanId) return;
+            
+            // Show loading indicator
+            document.getElementById('ai-loading-indicator').classList.remove('hidden');
+            document.getElementById('ai-recommendation-container').classList.add('hidden');
+            
+            // Fetch AI recommendations from API
+            fetch(`/api/ai_recommendations/${patientId}/${scanId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    document.getElementById('ai-loading-indicator').classList.add('hidden');
+                    document.getElementById('ai-recommendation-container').classList.remove('hidden');
+                    
+                    // Update last refresh time
+                    document.getElementById('ai-last-update-time').innerHTML = 
+                        `<i class="fas fa-circle text-xs mr-1"></i> Updated: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Update diagnosis
+                    document.getElementById('ai-diagnosis').innerHTML = `
+                        <div>
+                            <span class="font-medium">Disease:</span> ${data.diagnosis.disease.charAt(0).toUpperCase() + data.diagnosis.disease.slice(1)}
+                        </div>
+                        <div>
+                            <span class="font-medium">Result:</span> 
+                            <span class="${data.diagnosis.result === 'Positive' || data.diagnosis.result === 'Tuberculosis' ? 'text-red-300' : 'text-green-300'}">
+                                ${data.diagnosis.result}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Confidence:</span> ${data.diagnosis.confidence}
+                        </div>
+                        <div class="mt-2">
+                            <span class="font-medium">Follow-up:</span> ${data.follow_up_recommendation}
+                        </div>
+                    `;
+                    
+                    // Update risk badge
+                    const riskBadge = document.getElementById('risk-badge');
+                    let riskClass = '';
+                    
+                    switch(data.diagnosis.risk_category) {
+                        case 'High':
+                            riskClass = 'bg-red-500/20 text-red-100';
+                            break;
+                        case 'Medium':
+                            riskClass = 'bg-yellow-500/20 text-yellow-100';
+                            break;
+                        default:
+                            riskClass = 'bg-green-500/20 text-green-100';
+                    }
+                    
+                    riskBadge.className = `ml-3 px-3 py-1 rounded-full text-xs font-medium ${riskClass}`;
+                    riskBadge.textContent = `${data.diagnosis.risk_category} Risk (Score: ${data.diagnosis.risk_score})`;
+                    
+                    // Update risk factors
+                    const riskFactorsDiv = document.getElementById('risk-factors');
+                    if (data.diagnosis.risk_factors && data.diagnosis.risk_factors.length > 0) {
+                        let riskFactorsHtml = '<ul class="list-disc pl-5 space-y-1">';
+                        data.diagnosis.risk_factors.forEach(factor => {
+                            riskFactorsHtml += `<li>${factor}</li>`;
+                        });
+                        riskFactorsHtml += '</ul>';
+                        riskFactorsDiv.innerHTML = riskFactorsHtml;
+                    } else {
+                        riskFactorsDiv.innerHTML = '<div class="text-sm">No significant risk factors identified</div>';
+                    }
+                    
+                    // Update treatment suggestions
+                    const treatmentList = document.getElementById('ai-treatment-suggestions');
+                    treatmentList.innerHTML = '';
+                    
+                    if (data.treatment_suggestions && data.treatment_suggestions.length > 0) {
+                        data.treatment_suggestions.forEach(treatment => {
+                            const li = document.createElement('li');
+                            li.textContent = treatment;
+                            treatmentList.appendChild(li);
+                        });
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'No specific treatment suggestions available';
+                        treatmentList.appendChild(li);
+                    }
+                    
+                    // Update similar cases
+                    const similarCasesDiv = document.getElementById('ai-similar-cases');
+                    if (data.similar_cases && data.similar_cases.length > 0) {
+                        let casesHtml = '';
+                        data.similar_cases.forEach((caseData, index) => {
+                            casesHtml += `
+                                <div class="mb-2 ${index > 0 ? 'mt-3 pt-3 border-t border-white/10' : ''}">
+                                    <div><span class="font-medium">Case ID:</span> ${caseData.id}</div>
+                                    <div><span class="font-medium">Similarity:</span> ${caseData.similarity}</div>
+                                    <div><span class="font-medium">Outcome:</span> ${caseData.outcome}</div>
+                                    <div><span class="font-medium">Recovery Time:</span> ${getRecoveryTime(data.diagnosis.disease, data.diagnosis.risk_category)}</div>
+                                    <div><span class="font-medium">Treatment Effectiveness:</span> ${caseData.treatment_effectiveness}</div>
+                                </div>
+                            `;
+                        });
+                        similarCasesDiv.innerHTML = casesHtml;
+                    } else {
+                        similarCasesDiv.innerHTML = 'No similar cases found in the database';
+                    }
+                    
+                    // Load treatment timeline
+                    loadTreatmentTimeline(patientId, scanId, data.diagnosis);
+                    
+                    // Load heatmap visualization for this scan
+                    loadDoctorHeatmap(scanId);
+                })
+                .catch(error => {
+                    console.error('Error fetching AI recommendations:', error);
+                    document.getElementById('ai-loading-indicator').classList.add('hidden');
+                    document.getElementById('ai-recommendation-container').classList.remove('hidden');
+                    document.getElementById('ai-diagnosis').innerHTML = 'Error loading AI recommendations. Please try again.';
+                });
+        }
+        
+        // Function to load heatmap for doctor view
+        function loadDoctorHeatmap(scanId) {
+            if (!scanId) return;
+            
+            // Show loading state for heatmap
+            document.getElementById('doctor-heatmap-loading').classList.remove('hidden');
+            document.getElementById('doctor-heatmap-display').classList.add('hidden');
+            
+            // Fetch heatmap data from API
+            fetch(`/api/patient/heatmap/${scanId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading state
+                    document.getElementById('doctor-heatmap-loading').classList.add('hidden');
+                    document.getElementById('doctor-heatmap-display').classList.remove('hidden');
+                    
+                    // Set images
+                    const originalImage = document.getElementById('doctor-original-scan-image');
+                    const heatmapImage = document.getElementById('doctor-heatmap-image');
+                    
+                    if (!data.filename) {
+                        // If no scan image available, show placeholder
+                        originalImage.src = `https://via.placeholder.com/400x400.png?text=${data.disease.toUpperCase()}+Scan`;
+                        heatmapImage.src = `https://via.placeholder.com/400x400.png?text=Heatmap+Not+Available`;
+                    } else {
+                        // Use the separate original and heatmap images
+                        originalImage.src = data.original_filename ? 
+                            `/uploads/${data.original_filename}` : 
+                            `/uploads/${data.filename}`;
+                            
+                        heatmapImage.src = data.heatmap_filename ? 
+                            `/uploads/${data.heatmap_filename}` : 
+                            `/uploads/heatmap_${data.filename}`;
+                    }
+                    
+                    // Set analysis breakdown
+                    const analysisElement = document.getElementById('doctor-heatmap-analysis');
+                    analysisElement.innerHTML = '';
+                    
+                    // Add analysis points
+                    if (data.analysis && data.analysis.length > 0) {
+                        data.analysis.forEach(point => {
+                            const li = document.createElement('li');
+                            li.textContent = point;
+                            analysisElement.appendChild(li);
+                        });
+                    } else if (data.features) {
+                        // Use features if analysis not available
+                        for (const [key, feature] of Object.entries(data.features)) {
+                            const li = document.createElement('li');
+                            li.textContent = `${key.replace('_', ' ')}: ${feature.interpretation}`;
+                            analysisElement.appendChild(li);
+                        }
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'No detailed analysis available for this scan.';
+                        analysisElement.appendChild(li);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching heatmap data:', error);
+                    document.getElementById('doctor-heatmap-loading').classList.add('hidden');
+                    
+                    // Show error message
+                    const errorContainer = document.getElementById('doctor-heatmap-container');
+                    errorContainer.innerHTML = `
+                        <div class="text-center py-6">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-4 text-red-400"></i>
+                            <p>Error loading heatmap data. Please try again.</p>
+                            <p class="text-sm text-blue-200 mt-2">${error.message}</p>
+                        </div>
+                    `;
+                });
+        }
+        
+        // Load treatment timeline
+        function loadTreatmentTimeline(patientId, scanId, diagnosis) {
+            const timeline = document.getElementById('treatment-timeline');
+            
+            // Get today's date for reference
+            const today = new Date();
+            
+            // Calculate time periods based on diagnosis
+            const isHigh = diagnosis && diagnosis.risk_category === 'High';
+            const isMedium = diagnosis && diagnosis.risk_category === 'Medium';
+            const isFracture = diagnosis && diagnosis.disease === 'fracture';
+            const isTB = diagnosis && diagnosis.disease === 'tb';
+            
+            // Create timeline items dynamically based on diagnosis
+            const timelineItems = [];
+            
+            // Initial diagnosis (past)
+            timelineItems.push({
+                title: 'Initial Diagnosis',
+                date: new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000),
+                description: isFracture 
+                    ? `X-ray confirms ${diagnosis.result.toLowerCase()} fracture` 
+                    : `Chest X-ray shows ${diagnosis.result.toLowerCase()} for tuberculosis`
+            });
+            
+            // Treatment started (past)
+            timelineItems.push({
+                title: 'Treatment Started',
+                date: new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000),
+                description: isFracture
+                    ? (diagnosis.result === 'Positive' 
+                        ? 'Cast applied, pain medication prescribed' 
+                        : 'Preventive care instructions provided')
+                    : (diagnosis.result === 'Tuberculosis' 
+                        ? 'TB medication regimen initiated, isolation protocols advised' 
+                        : 'Preventive measures and monitoring recommended')
+            });
+            
+            // Follow-up appointment (future - timing varies by risk level)
+            const followUpDays = isHigh ? 7 : (isMedium ? 14 : 30);
+            timelineItems.push({
+                title: 'Follow-up Appointment',
+                date: new Date(today.getTime() + followUpDays * 24 * 60 * 60 * 1000),
+                description: 'Scheduled for review and progress assessment'
+            });
+            
+            // For high risk patients, add more frequent monitoring
+            if (isHigh) {
+                timelineItems.push({
+                    title: 'Additional Monitoring',
+                    date: new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000),
+                    description: isFracture 
+                        ? 'Secondary imaging to verify healing progress' 
+                        : 'Lab tests to monitor response to treatment'
+                });
+            }
+            
+            // Expected recovery or reassessment time
+            const recoveryWeeks = isFracture 
+                ? (isHigh ? 12 : (isMedium ? 8 : 6)) 
+                : (isHigh ? 24 : (isMedium ? 16 : 12));
+            
+            timelineItems.push({
+                title: isFracture ? 'Expected Recovery' : 'Major Reassessment',
+                date: new Date(today.getTime() + recoveryWeeks * 7 * 24 * 60 * 60 * 1000),
+                description: isFracture 
+                    ? 'Anticipated full recovery if treatment plan followed' 
+                    : 'Comprehensive evaluation of treatment effectiveness'
+            });
+            
+            // Clear timeline and add new items
+            timeline.innerHTML = '';
+            timelineItems.forEach(item => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                
+                timelineItem.innerHTML = `
+                    <div class="font-medium">${item.title}</div>
+                    <div class="text-sm text-blue-200">${item.date.toISOString().split('T')[0]}</div>
+                    <div class="mt-1">${item.description}</div>
+                `;
+                
+                timeline.appendChild(timelineItem);
+            });
+        }
+        
+        // Refresh treatment plan
+        function refreshTreatmentPlan() {
+            const patientSelector = document.getElementById('ai-patient-selector');
+            const scanSelector = document.getElementById('ai-scan-selector');
+            
+            if (patientSelector.value && scanSelector.value) {
+                loadTreatmentTimeline(patientSelector.value, scanSelector.value);
+            }
+        }
+        
+        // Apply AI recommendations
+        function applyAIRecommendations() {
+            const patientSelector = document.getElementById('ai-patient-selector');
+            const scanSelector = document.getElementById('ai-scan-selector');
+            
+            if (!patientSelector.value || !scanSelector.value) {
+                alert('Please select a patient and scan first.');
+                return;
+            }
+            
+            // In a real implementation, this would make an API call to apply the recommendations
+            // Here we'll simulate success with an alert
+            alert('AI recommendations have been applied to the patient record.');
+            
+            // Refresh the treatment plan to show changes
+            refreshTreatmentPlan();
+        }
+        
+        // Set treatment dates
+        function setTreatmentDates() {
+            const today = new Date();
+            
+            document.getElementById('treatment-date-1').textContent = 
+                new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            
+            document.getElementById('treatment-date-2').textContent = 
+                new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            
+            document.getElementById('treatment-date-3').textContent = 
+                new Date(today.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        }
+        
+        // Add treatment step
+        function addTreatmentStep() {
+            const timeline = document.querySelector('.timeline');
+            const newStep = document.createElement('div');
+            newStep.className = 'timeline-item';
+            
+            const stepTitle = prompt('Enter treatment step title:');
+            if (!stepTitle) return;
+            
+            const stepDescription = prompt('Enter treatment step description:');
+            if (!stepDescription) return;
+            
+            newStep.innerHTML = `
+                <div class="font-medium">${stepTitle}</div>
+                <div class="text-sm text-blue-200">${new Date().toISOString().split('T')[0]}</div>
+                <div class="mt-1">${stepDescription}</div>
+            `;
+            
+            timeline.appendChild(newStep);
+        }
+        
+        // Send alert to patient
+        function sendAlertTo(patientId) {
+            const message = prompt('Enter message to send to patient:');
+            if (!message) return;
+            
+            alert(`Alert will be sent to patient #${patientId}: ${message}`);
+            // In a real implementation, this would make an API call to send the alert
+        }
+    </script>
+</head>
+<body class="{{ 'dark-mode' if dark_mode else '' }}">
+    <!-- Hidden fields for JS -->
+    <div id="user-role" data-is-doctor="{{ 'true' if user.role == 'doctor' else 'false' }}" class="hidden"></div>
+    <div id="user-name" class="hidden">{{ user.name }}</div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h1 class="text-3xl font-bold text-white">Doctor Dashboard</h1>
+                    <p class="text-green-200">Welcome, Dr. <span id="user-name">{{ user.name or 'Doctor' }}</span></p>
+                    <span id="user-role" data-is-doctor="true" class="hidden"></span>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('index') }}" class="nav-pill flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="nav-pill flex items-center gap-2 text-red-200">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab active" data-tab="patients-tab">
+                <i class="fas fa-users mr-2"></i>Patient Management
+            </div>
+            <div class="tab" data-tab="analytics-tab">
+                <i class="fas fa-chart-line mr-2"></i>Analytics Dashboard
+            </div>
+            <div class="tab" data-tab="ai-assist-tab">
+                <i class="fas fa-robot mr-2"></i>AI Assistant
+            </div>
+        </div>
+        
+        <!-- Analytics Dashboard Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">
+                    <i class="fas fa-chart-line mr-2"></i>Analytics Dashboard
+                </h2>
+                <div class="text-sm text-blue-200">
+                    <div id="last-update-time" class="flex items-center">
+                        <i class="fas fa-sync-alt mr-1"></i> Last updated: just now | 
+                        <span class="text-green-300 ml-1"><i class="fas fa-circle text-xs mr-1"></i>Real-time data</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="stats-card glass-card bg-blue-500/20">
+                    <div class="stats-label">Total Patients</div>
+                    <div class="stats-value" id="total-patients-count">{{ patients|length }}</div>
+                    <div class="text-sm text-blue-200">Under your care</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-red-500/20">
+                    <div class="stats-label">Positive Results</div>
+                    <div class="stats-value" id="positive-count">
+                        {% set positive_count = 0 %}
+                        {% for patient in patients %}
+                            {% for scan in patient.history %}
+                                {% if scan.result == 'Positive' or scan.result == 'Tuberculosis' %}
+                                    {% set positive_count = positive_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ positive_count }}
+                    </div>
+                    <div class="text-sm text-red-200">Need attention</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-green-500/20">
+                    <div class="stats-label">Negative Results</div>
+                    <div class="stats-value" id="negative-count">
+                        {% set negative_count = 0 %}
+                        {% for patient in patients %}
+                            {% for scan in patient.history %}
+                                {% if scan.result == 'Negative' or scan.result == 'Normal' %}
+                                    {% set negative_count = negative_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ negative_count }}
+                    </div>
+                    <div class="text-sm text-green-200">Healthy patients</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-purple-500/20">
+                    <div class="stats-label">New Scans Today</div>
+                    <div class="stats-value" id="today-scans-count">
+                        {% set today_scans = 0 %}
+                        {% for patient in patients %}
+                            {% for scan in patient.history %}
+                                {% if scan.date and scan.date.strftime('%Y-%m-%d') == today_date %}
+                                    {% set today_scans = today_scans + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ today_scans }}
+                    </div>
+                    <div class="text-sm text-purple-200">Today's activity</div>
+                </div>
+            </div>
+            
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Disease Distribution</h3>
+                    <div class="h-64">
+                        <canvas id="diseaseDistributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Weekly Trends</h3>
+                    <div class="h-64">
+                        <canvas id="weeklyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Patient Age Distribution</h3>
+                    <div class="h-64">
+                        <canvas id="ageDistributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Model Performance</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/5 p-3 rounded">
+                            <div class="text-sm text-blue-200">Fracture Detection</div>
+                            <div class="text-2xl font-bold" id="fracture-accuracy">85%</div>
+                            <div class="text-xs text-blue-300">Accuracy</div>
+                        </div>
+                        <div class="bg-white/5 p-3 rounded">
+                            <div class="text-sm text-blue-200">TB Detection</div>
+                            <div class="text-2xl font-bold" id="tb-accuracy">78%</div>
+                            <div class="text-xs text-blue-300">Accuracy</div>
+                        </div>
+                        <div class="bg-white/5 p-3 rounded">
+                            <div class="text-sm text-blue-200">False Positives</div>
+                            <div class="text-2xl font-bold" id="false-positive-rate">15%</div>
+                            <div class="text-xs text-blue-300">Rate</div>
+                        </div>
+                        <div class="bg-white/5 p-3 rounded">
+                            <div class="text-sm text-blue-200">False Negatives</div>
+                            <div class="text-2xl font-bold" id="false-negative-rate">8%</div>
+                            <div class="text-xs text-blue-300">Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6">
+                <button id="export-analytics-btn" class="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded text-white">
+                    <i class="fas fa-file-export"></i>
+                    Export Analytics Report
+                </button>
+            </div>
+        </div>
+        
+        <!-- AI Assistant Tab -->
+        <div id="ai-assist-tab" class="tab-content hidden">
+            <h2 class="text-xl font-bold mb-4"><i class="fas fa-robot mr-2"></i>AI Diagnostic Assistant</h2>
+            
+            <div class="glass-card p-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Patient & Scan Selection</h3>
+                    <div class="text-sm text-blue-300">
+                        <span id="ai-last-update-time" class="real-time-indicator">
+                            <i class="fas fa-circle text-xs mr-1"></i> Real-time analysis
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="ai-patient-select" class="block mb-2 text-sm font-medium">Select Patient</label>
+                    <select id="ai-patient-select" class="w-full p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white">
+                        <option value="">Choose a patient</option>
+                        {% for patient in patients %}
+                        <option value="{{ patient.id }}">{{ patient.name or 'Patient ' + patient.id|string }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="ai-scan-select" class="block mb-2 text-sm font-medium">Select Scan</label>
+                    <select id="ai-scan-select" class="w-full p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white" disabled>
+                        <option value="">Choose a patient first</option>
+                    </select>
+                </div>
+
+                <button id="ai-analyze-btn" class="w-full py-2 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all" disabled>
+                    <i class="fas fa-brain"></i>
+                    Analyze with AI
+                </button>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="ai-loading-indicator" class="glass-card p-8 text-center hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500 border-r-2 border-blue-500 border-b-2 border-transparent mx-auto mb-4"></div>
+                <p class="text-lg">Analyzing patient data with AI...</p>
+                <p class="text-sm text-blue-300 mt-2">This might take a few seconds</p>
+            </div>
+
+            <!-- AI Recommendation Container -->
+            <div id="ai-recommendation-container" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="glass-card p-4">
+                        <h3 class="text-lg font-semibold mb-3">Diagnosis <span id="risk-badge" class="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-100">Medium Risk</span></h3>
+                        <div id="ai-diagnosis" class="mb-4 space-y-1">
+                            <!-- Dynamic diagnosis content will be inserted here -->
+                        </div>
+                        
+                        <h4 class="font-medium mb-2 border-t border-white/10 pt-3 mt-4">Risk Factors:</h4>
+                        <div id="risk-factors" class="text-sm">
+                            <!-- Dynamic risk factors will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-4">
+                        <h3 class="text-lg font-semibold mb-3">Treatment Suggestions</h3>
+                        <ul id="ai-treatment-suggestions" class="list-disc pl-5 space-y-2">
+                            <!-- Dynamic treatment content will be inserted here -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Add heatmap visualization section -->
+                <div class="glass-card p-4 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Heatmap Analysis</h3>
+                        <div class="text-xs">
+                            <div class="real-time-indicator">
+                                <i class="fas fa-circle text-xs mr-1"></i> AI-powered visualization
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="doctor-heatmap-container" class="bg-white/5 rounded-lg p-4 mb-4 min-h-[300px] flex flex-col">
+                        <div id="doctor-heatmap-loading" class="text-center flex-1 flex flex-col items-center justify-center">
+                            <div class="inline-block mb-3">
+                                <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                            </div>
+                            <p>Loading heatmap visualization...</p>
+                            <p class="text-sm text-blue-200 mt-2">Our AI is analyzing image patterns</p>
+                        </div>
+                        <div id="doctor-heatmap-display" class="hidden w-full">
+                            <div class="flex flex-col md:flex-row gap-6">
+                                <div class="original-image w-full md:w-1/2">
+                                    <p class="text-sm text-blue-200 mb-2">Original Scan</p>
+                                    <div class="relative h-64 bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                                        <img id="doctor-original-scan-image" src="" alt="Original scan" class="max-w-full max-h-full object-contain" />
+                                    </div>
+                                </div>
+                                <div class="heatmap-image w-full md:w-1/2">
+                                    <p class="text-sm text-blue-200 mb-2">AI Analysis Heatmap</p>
+                                    <div class="relative h-64 bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                                        <img id="doctor-heatmap-image" src="" alt="Heatmap visualization" class="max-w-full max-h-full object-contain" />
+                                    </div>
+                                    <div id="doctor-heatmap-legend" class="mt-2 flex items-center justify-center text-xs">
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 inline-block rounded-sm bg-blue-400 mr-1"></span>
+                                            <span class="mr-2">Normal</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 inline-block rounded-sm bg-yellow-400 mr-1"></span>
+                                            <span class="mr-2">Low probability</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 inline-block rounded-sm bg-orange-500 mr-1"></span>
+                                            <span class="mr-2">Medium probability</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 inline-block rounded-sm bg-red-500 mr-1"></span>
+                                            <span>High probability</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-blue-900/20 rounded-lg">
+                                <h5 class="font-medium mb-2">Analysis Breakdown:</h5>
+                                <ul id="doctor-heatmap-analysis" class="list-disc pl-5 space-y-1 text-sm"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-4">
+                        <h3 class="text-lg font-semibold mb-3">Similar Cases</h3>
+                        <div id="ai-similar-cases" class="space-y-3">
+                            <!-- Dynamic similar cases will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-4">
+                        <h3 class="text-lg font-semibold mb-3">Treatment Timeline</h3>
+                        <div id="treatment-timeline" class="space-y-4">
+                            <!-- Dynamic timeline will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <a href="#" id="ai-explain-link" class="text-blue-300 hover:text-blue-100 text-sm flex items-center gap-1">
+                        <i class="fas fa-info-circle"></i>
+                        <span>How is risk stratification calculated?</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // AI Assistant functionality
+            document.addEventListener('DOMContentLoaded', function() {
+                const patientSelect = document.getElementById('ai-patient-select');
+                const scanSelect = document.getElementById('ai-scan-select');
+                const analyzeBtn = document.getElementById('ai-analyze-btn');
+                const explainLink = document.getElementById('ai-explain-link');
+                
+                // Handle patient selection change
+                patientSelect.addEventListener('change', function() {
+                    const patientId = this.value;
+                    scanSelect.disabled = true;
+                    scanSelect.innerHTML = '<option value="">Loading scans...</option>';
+                    analyzeBtn.disabled = true;
+                    
+                    if (patientId) {
+                        // Fetch patient scans
+                        fetch(`/api/patients/${patientId}/scans`)
+                            .then(response => response.json())
+                            .then(data => {
+                                scanSelect.innerHTML = '<option value="">Select a scan</option>';
+                                
+                                if (data.scans && data.scans.length > 0) {
+                                    data.scans.forEach(scan => {
+                                        const option = document.createElement('option');
+                                        option.value = scan.id;
+                                        // Format date for display
+                                        const scanDate = new Date(scan.date);
+                                        const formattedDate = scanDate.toLocaleDateString();
+                                        option.textContent = `${scan.disease} (${scan.result}) - ${formattedDate}`;
+                                        scanSelect.appendChild(option);
+                                    });
+                                    scanSelect.disabled = false;
+                                } else {
+                                    scanSelect.innerHTML = '<option value="">No scans available</option>';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error fetching scans:', error);
+                                scanSelect.innerHTML = '<option value="">Error loading scans</option>';
+                            });
+                    } else {
+                        scanSelect.innerHTML = '<option value="">Choose a patient first</option>';
+                    }
+                });
+                
+                // Handle scan selection change
+                scanSelect.addEventListener('change', function() {
+                    analyzeBtn.disabled = !this.value;
+                });
+                
+                // Handle analyze button click
+                analyzeBtn.addEventListener('click', function() {
+                    const patientId = patientSelect.value;
+                    const scanId = scanSelect.value;
+                    
+                    if (patientId && scanId) {
+                        // Get the AI recommendation
+                        updateAIRecommendations(patientId, scanId);
+                    }
+                });
+                
+                // Risk stratification explanation
+                explainLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Fetch explanation from API
+                    fetch('/api/risk_stratification/explanation')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Create modal for explanation
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+                            
+                            // Modal content
+                            modal.innerHTML = `
+                                <div class="glass-card max-w-3xl max-h-[80vh] overflow-y-auto p-6">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h2 class="text-xl font-bold">${data.title}</h2>
+                                        <button class="text-white hover:text-red-300" id="close-modal">
+                                            <i class="fas fa-times text-lg"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <p class="mb-4">${data.overview}</p>
+                                    
+                                    <h3 class="text-lg font-semibold mb-2 mt-6">Risk Categories</h3>
+                                    <div class="space-y-4">
+                                        ${data.risk_categories.map(category => `
+                                            <div class="p-3 rounded ${category.name === 'High Risk' ? 'bg-red-500/20' : (category.name === 'Medium Risk' ? 'bg-yellow-500/20' : 'bg-green-500/20')}">
+                                                <h4 class="font-medium">${category.name} (Score: ${category.score_range})</h4>
+                                                <p class="mb-2">${category.description}</p>
+                                                <div class="text-sm">
+                                                    <div class="font-medium mb-1">Recommended Actions:</div>
+                                                    <ul class="list-disc pl-5">
+                                                        ${category.recommended_actions.map(action => `<li>${action}</li>`).join('')}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <h3 class="text-lg font-semibold mb-2 mt-6">Scoring Factors</h3>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full">
+                                            <thead>
+                                                <tr class="border-b border-white/20">
+                                                    <th class="text-left p-2">Factor</th>
+                                                    <th class="text-left p-2">Score Impact</th>
+                                                    <th class="text-left p-2">Explanation</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${data.scoring_factors.map((factor, i) => `
+                                                    <tr class="${i % 2 === 0 ? 'bg-white/5' : ''}">
+                                                        <td class="p-2">${factor.factor}</td>
+                                                        <td class="p-2">${factor.score_impact}</td>
+                                                        <td class="p-2">${factor.explanation}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <h3 class="text-lg font-semibold mb-2 mt-6">Implementation Notes</h3>
+                                    <ul class="list-disc pl-5">
+                                        ${data.implementation_notes.map(note => `<li class="mb-1">${note}</li>`).join('')}
+                                    </ul>
+                                    
+                                    <div class="mt-6 text-right text-sm text-blue-200">
+                                        Last updated: ${new Date(data.last_updated).toLocaleString()}
+                                    </div>
+                                </div>
+                            `;
+                            
+                            document.body.appendChild(modal);
+                            
+                            // Handle close modal
+                            document.getElementById('close-modal').addEventListener('click', function() {
+                                document.body.removeChild(modal);
+                            });
+                            
+                            // Close modal on outside click
+                            modal.addEventListener('click', function(e) {
+                                if (e.target === modal) {
+                                    document.body.removeChild(modal);
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error fetching risk stratification explanation:', error);
+                            alert('Error loading risk stratification explanation. Please try again later.');
+                        });
+                });
+            });
+        </script>
+        
+        <!-- Patients Tab (Original Content) -->
+        <div id="patients-tab" class="tab-content active">
+        
+        <!-- Stats Section -->
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-4">
+                <div class="stats-card glass-card bg-blue-500/20">
+                    <div class="stats-label">Total Patients</div>
+                    <div class="stats-value" id="total-patients-count">{{ patients|length }}</div>
+                    <div class="text-sm text-blue-200">Under your care</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-red-500/20">
+                    <div class="stats-label">Positive Results</div>
+                    <div class="stats-value" id="positive-count">
+                        {{ patients|selectattr('history', 'defined')|map(attribute='history')|selectattr('result', 'equalto', 'Positive')|list|length }}
+                    </div>
+                    <div class="text-sm text-red-200">Need attention</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-green-500/20">
+                    <div class="stats-label">Negative Results</div>
+                    <div class="stats-value" id="negative-count">
+                        {{ patients|selectattr('history', 'defined')|map(attribute='history')|selectattr('result', 'equalto', 'Negative')|list|length }}
+                    </div>
+                    <div class="text-sm text-green-200">Healthy patients</div>
+                </div>
+                
+                <div class="stats-card glass-card bg-purple-500/20">
+                    <div class="stats-label">New Scans Today</div>
+                    <div class="stats-value" id="today-scans-count">
+                        {% set today_scans = 0 %}
+                        {% for patient in patients %}
+                            {% for scan in patient.history %}
+                                {% if scan.date and scan.date.strftime('%Y-%m-%d') == today_date %}
+                                    {% set today_scans = today_scans + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ today_scans }}
+                    </div>
+                    <div class="text-sm text-purple-200">Today's activity</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search & Filter Section -->
+        <div class="mb-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <form method="GET" action="{{ url_for('search_patients') }}" class="search-box md:w-2/3">
+                    <input type="text" name="query" value="{{ search_query if search_query else '' }}" placeholder="Search patients by name or email..." class="w-full">
+                    <button type="submit" class="whitespace-nowrap"><i class="fas fa-search mr-2"></i>Search</button>
+                </form>
+                
+                <div class="filters md:w-1/3">
+                    <div class="filter-option active" data-filter="all">All (<span id="visible-patients-count">{{ patients|length }}</span>)</div>
+                    <div class="filter-option" data-filter="positive">Positive</div>
+                    <div class="filter-option" data-filter="negative">Negative</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Patients List -->
+        <div class="patient-list">
+            <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-users mr-2"></i>Patients List</h2>
+            {% if patients %}
+                {% for patient in patients %}
+                    <div class="patient-card glass-card mb-6 hover:bg-white/5">
+                        <div class="flex flex-col md:flex-row justify-between">
+                            <div class="md:w-1/3">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-xl font-bold mr-3">
+                                        {{ patient.name[0].upper() if patient.name else 'P' }}
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold">
+                                            {% set risk_level = 'low' %}
+                                            {% for scan in patient.history %}
+                                                {% if scan.result == 'Positive' or scan.result == 'Tuberculosis' %}
+                                                    {% set risk_level = 'high' %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            <span class="risk-indicator risk-{{ risk_level }}"></span>
+                                            {{ patient.name or 'Not Set' }}
+                                        </h3>
+                                        <p class="text-blue-200 text-sm">{{ patient.email }}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-1 text-sm mb-4">
+                                    <p><i class="fas fa-user mr-2"></i>{{ patient.age or 'N/A' }} years, {{ patient.sex or 'N/A' }}</p>
+                                    <p><i class="fas fa-weight mr-2"></i>{{ patient.weight|string + ' kg' if patient.weight else 'N/A' }}</p>
+                                    <p><i class="fas fa-ruler-vertical mr-2"></i>{{ patient.height|string + ' cm' if patient.height else 'N/A' }}</p>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    {% for scan in patient.history %}
+                                        {% if loop.index0 < 2 %}
+                                            <span class="badge {{ 'badge-positive' if scan.result == 'Positive' else 'badge-negative' }}">
+                                                {{ scan.disease|capitalize }}: {{ scan.result }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-2 mt-4">
+                                    <a href="{{ url_for('view_patient_history', patient_id=patient.id) }}" class="btn-primary py-1 px-3 rounded text-white bg-blue-500 hover:bg-blue-600 text-sm font-medium flex items-center">
+                                        <i class="fas fa-history mr-1"></i> View History
+                                    </a>
+                                    
+                                    <a href="#chat-section-{{ patient.id }}" class="btn-secondary py-1 px-3 rounded text-white bg-purple-500/70 hover:bg-purple-500 text-sm font-medium flex items-center">
+                                        <i class="fas fa-comment-medical mr-1"></i> Chat
+                                    </a>
+                                    
+                                    <!-- New report button -->
+                                    <button onclick="generateReport('{{ patient.id }}')" class="py-1 px-3 rounded text-white bg-green-500/70 hover:bg-green-500 text-sm font-medium flex items-center">
+                                        <i class="fas fa-file-medical mr-1"></i> Report
+                                    </button>
+                                    
+                                    <!-- New AI Analysis button -->
+                                    <button onclick="showAIAnalysis('{{ patient.id }}')" class="py-1 px-3 rounded text-white bg-indigo-500/70 hover:bg-indigo-500 text-sm font-medium flex items-center">
+                                        <i class="fas fa-robot mr-1"></i> AI Analysis
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat Section -->
+                            <div class="md:w-2/3 mt-4 md:mt-0" id="chat-section-{{ patient.id }}">
+                                <div class="chat-section">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-lg font-semibold"><i class="fas fa-comment-dots mr-2"></i>Chat with {{ patient.name or 'Patient' }}</h3>
+                                        <span class="text-xs text-blue-200" id="last-message-time-{{ patient.id }}">Loading messages...</span>
+                                    </div>
+                                    
+                                    <div class="chat-messages flex flex-col" id="chat-messages-{{ patient.id }}">
+                                        <div class="text-center text-white/50 py-2">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i>Loading messages...
+                                        </div>
+                                    </div>
+                                    
+                                    <form class="chat-form" method="POST" action="{{ url_for('send_message') }}">
+                                        <input type="hidden" name="receiver_id" value="{{ patient.id }}">
+                                        <input type="text" name="message" placeholder="Type a message..." required>
+                                        <button type="submit"><i class="fas fa-paper-plane mr-1"></i>Send</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="glass-card p-8 text-center">
+                    <i class="fas fa-user-slash text-4xl mb-4 text-blue-200"></i>
+                    <p class="text-xl">No patients found.</p>
+                    <p class="text-blue-200 mt-2">Try a different search query or check back later.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-sm text-blue-200">
+            <p>© 2025 HealthSync. All rights reserved.</p>
+            <p>Current time: {{ today_date }}</p>
+        </footer>
+    </div>
+
+    <!-- Patient Reports Tab -->
+    <div id="patient-reports-tab" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold">
+                <i class="fas fa-file-medical-alt mr-2"></i>Patient Reports
+            </h2>
+            <div>
+                <button id="refresh-reports-btn" class="flex items-center gap-2 py-2 px-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh Reports
+                </button>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <div class="glass-card p-4">
+                <div class="flex items-center mb-4">
+                    <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white mr-2">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold">Generate Patient Reports</h3>
+                </div>
+                <p class="mb-4">Generate comprehensive medical reports for your patients. Select a patient and the report type to create a new report.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="report-patient-select" class="block mb-2 text-sm font-medium">Select Patient</label>
+                        <select id="report-patient-select" class="w-full p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white">
+                            <option value="">Choose a patient</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.name or 'Patient ' + patient.id|string }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="report-type-select" class="block mb-2 text-sm font-medium">Report Type</label>
+                        <select id="report-type-select" class="w-full p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 text-white">
+                            <option value="comprehensive">Comprehensive Medical Report</option>
+                            <option value="summary">Summary Report</option>
+                            <option value="diagnostic">Diagnostic Analysis Report</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button id="generate-patient-report-btn" class="w-full py-2 px-4 bg-green-500 hover:bg-green-600 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-file-medical"></i>
+                            Generate Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="patient-reports-loading" class="hidden">
+            <div class="glass-card p-8 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500 border-r-2 border-blue-500 border-b-2 border-transparent mx-auto mb-4"></div>
+                <p class="text-lg">Generating patient report...</p>
+                <p class="text-sm text-blue-300 mt-2">This might take a few seconds</p>
+            </div>
+        </div>
+        
+        <div id="recent-reports-container">
+            <h3 class="text-lg font-semibold mb-4">Recent Reports</h3>
+            
+            <div id="reports-placeholder" class="text-center py-8 glass-card">
+                <i class="fas fa-file-medical text-5xl mb-4 text-blue-300"></i>
+                <p>No reports available yet</p>
+                <p class="text-sm text-blue-200 mt-2">Select a patient and generate a report</p>
+            </div>
+            
+            <div id="reports-list" class="hidden space-y-4">
+                <!-- Reports will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Patient Reports Tab Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const reportPatientSelect = document.getElementById('report-patient-select');
+            const generateReportBtn = document.getElementById('generate-patient-report-btn');
+            const refreshReportsBtn = document.getElementById('refresh-reports-btn');
+            const reportsPlaceholder = document.getElementById('reports-placeholder');
+            const reportsList = document.getElementById('reports-list');
+            
+            // Enable/disable generate report button based on patient selection
+            if (reportPatientSelect) {
+                reportPatientSelect.addEventListener('change', function() {
+                    generateReportBtn.disabled = !this.value;
+                    
+                    if (this.value) {
+                        // Show existing reports for this patient
+                        loadPatientReports(this.value);
+                    } else {
+                        // Hide reports list, show placeholder
+                        reportsPlaceholder.classList.remove('hidden');
+                        reportsList.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Handle generate report button click
+            if (generateReportBtn) {
+                generateReportBtn.addEventListener('click', function() {
+                    const patientId = reportPatientSelect.value;
+                    const reportType = document.getElementById('report-type-select').value;
+                    
+                    if (!patientId) return;
+                    
+                    // Show loading indicator
+                    document.getElementById('patient-reports-loading').classList.remove('hidden');
+                    reportsPlaceholder.classList.add('hidden');
+                    reportsList.classList.add('hidden');
+                    
+                    // Call API to generate report
+                    fetch('/api/generate_report/' + patientId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ report_type: reportType })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hide loading indicator
+                        document.getElementById('patient-reports-loading').classList.add('hidden');
+                        
+                        if (data.status === 'success') {
+                            // Add report to list
+                            addReportToList(data.report);
+                            
+                            // Show reports list
+                            reportsPlaceholder.classList.add('hidden');
+                            reportsList.classList.remove('hidden');
+                        } else {
+                            alert('Error generating report: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error generating report:', error);
+                        document.getElementById('patient-reports-loading').classList.add('hidden');
+                        
+                        // Show error message
+                        reportsPlaceholder.classList.remove('hidden');
+                        reportsPlaceholder.innerHTML = `
+                            <i class="fas fa-exclamation-triangle text-5xl mb-4 text-red-400"></i>
+                            <p>Error generating report. Please try again.</p>
+                        `;
+                    });
+                });
+            }
+            
+            // Handle refresh reports button click
+            if (refreshReportsBtn) {
+                refreshReportsBtn.addEventListener('click', function() {
+                    const patientId = reportPatientSelect.value;
+                    
+                    if (patientId) {
+                        loadPatientReports(patientId);
+                    }
+                });
+            }
+            
+            // Function to load patient reports
+            function loadPatientReports(patientId) {
+                // Show loading state
+                reportsList.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                        <p class="mt-2">Loading reports...</p>
+                    </div>
+                `;
+                reportsList.classList.remove('hidden');
+                reportsPlaceholder.classList.add('hidden');
+                
+                // Fetch patient reports
+                fetch('/api/get_reports/' + patientId)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hide loading indicator
+                        document.getElementById('patient-reports-loading').classList.add('hidden');
+                        
+                        if (data.status === 'success') {
+                            // Clear existing reports
+                            reportsList.innerHTML = '';
+                            
+                            // Add each report to the list
+                            data.reports.forEach(report => {
+                                const reportItem = document.createElement('div');
+                                reportItem.className = 'glass-card p-4 mb-4';
+                                reportItem.innerHTML = `
+                                    <h3 class="text-lg font-semibold mb-2">${report.title}</h3>
+                                    <p class="mb-2">${report.summary}</p>
+                                    <a href="${report.file_url}" target="_blank" class="text-blue-300 hover:text-blue-100">View Report</a>
+                                `;
+                                reportsList.appendChild(reportItem);
+                            });
+                            
+                            // Show reports list
+                            reportsPlaceholder.classList.add('hidden');
+                            reportsList.classList.remove('hidden');
+                        } else {
+                            alert('Error loading reports: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading reports:', error);
+                        document.getElementById('patient-reports-loading').classList.add('hidden');
+                        
+                        // Show error message
+                        reportsPlaceholder.classList.remove('hidden');
+                        reportsPlaceholder.innerHTML = `
+                            <i class="fas fa-exclamation-triangle text-5xl mb-4 text-red-400"></i>
+                            <p>Error loading reports. Please try again.</p>
+                        `;
+                    });
+            }
+        });
+    </script>
+</body>
+</html>

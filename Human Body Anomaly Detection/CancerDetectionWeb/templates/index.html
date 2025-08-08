@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if dark_mode else 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthSync - AI Diagnostics</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            min-height: 100vh;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+        .dark body {
+            background: linear-gradient(135deg, #1a202c 0%, #4b5563 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.15s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+        }
+        .wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%2393c5fd" fill-opacity="0.1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,85.3C672,75,768,85,864,106.7C960,128,1056,160,1152,176C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+            background-size: cover;
+        }
+        .dark .wave {
+            background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234b5563" fill-opacity="0.1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,85.3C672,75,768,85,864,106.7C960,128,1056,160,1152,176C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+        }
+        .drag-over {
+            border: 2px dashed #93c5fd;
+            background: rgba(147, 197, 253, 0.1);
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            display: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .dark .toast {
+            background: rgba(30, 58, 138, 0.9);
+            color: #93c5fd;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+        .modal-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 90%;
+            max-width: 350px;
+            margin: 10% auto;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        .dark .modal-content {
+            background: rgba(30, 58, 138, 0.9);
+        }
+        .confidence-meter {
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            overflow: hidden;
+            margin-bottom: 4px;
+            width: 100%;
+        }
+        .confidence-bar {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(to right, #60a5fa, #2563eb);
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        .confidence-value {
+            font-size: 0.8rem;
+            text-align: right;
+            color: #fff;
+            font-weight: bold;
+        }
+        .confidence-container {
+            margin-bottom: 1rem;
+        }
+        .confidence-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .confidence-bar-container {
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            width: 100%;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .confidence-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+            border-radius: 5px;
+            width: 0%;
+            transition: width 1.2s ease-in-out;
+        }
+        .confidence-value {
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+            min-width: 40px;
+            text-align: right;
+        }
+        .loading-spinner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .loading-spinner {
+            text-align: center;
+            background-color: rgba(59, 130, 246, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .spinner-border {
+            display: inline-block;
+            width: 2.5rem;
+            height: 2.5rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        .result-card {
+            transition: all 0.3s ease;
+        }
+        .card {
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card-body {
+            padding: 16px;
+        }
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .card-text {
+            margin-bottom: 12px;
+        }
+        .bg-danger {
+            background-color: #dc3545 !important;
+        }
+        .bg-success {
+            background-color: #28a745 !important;
+        }
+        .bg-warning {
+            background-color: #ffc107 !important;
+        }
+        .text-white {
+            color: #fff !important;
+        }
+        .text-dark {
+            color: #343a40 !important;
+        }
+        .btn {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            cursor: pointer;
+        }
+        .btn-primary {
+            color: #fff;
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .btn-secondary {
+            color: #fff;
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .ms-2 {
+            margin-left: 0.5rem;
+        }
+        .heatmap-btn {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+            font-weight: 600;
+            padding: 0.6rem 1.2rem;
+            font-size: 1.05rem;
+            transition: all 0.3s ease;
+        }
+        .heatmap-btn:hover {
+            background-color: #4338ca;
+            border-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+        .loading-spinner-container {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col">
+    <div class="wave"></div>
+    <header class="glass-card shadow-md py-4 px-4 z-10">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-heartbeat text-2xl text-blue-300 mr-2"></i>
+                <h1 class="text-2xl font-bold text-white">HealthSync</h1>
+            </div>
+            <div>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('dashboard') }}" class="text-blue-200 mr-4 hover:text-white font-medium">Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="text-blue-200 hover:text-white font-medium">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-blue-200 mr-4 hover:text-white font-medium">Login</a>
+                    <a href="{{ url_for('signup') }}" class="text-blue-200 hover:text-white font-medium">Sign Up</a>
+                {% endif %}
+                <form action="{{ url_for('toggle_dark_mode', next=url_for('index')) }}" method="GET" style="display:inline;">
+                    <button id="theme-toggle" class="text-blue-200 hover:text-white focus:outline-none ml-4" type="submit">
+                        <i class="fas fa-{{ 'moon' if not dark_mode else 'sun' }} text-lg"></i>
+                        <span class="sr-only">Toggle dark mode</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+    <main class="flex-grow flex items-center justify-center py-6 z-10">
+        <div class="max-w-xl w-full glass-card rounded-lg p-4">
+            <h2 class="text-2xl font-bold text-center mb-4">HealthSync - AI Diagnostics</h2>
+            <p class="text-center text-gray-200 mb-3">Empowering Accurate Diagnosis</p>
+            
+            <!-- Disease Selection -->
+            <h3 class="text-sm uppercase text-gray-300 mb-2 ml-1">Select condition for analysis:</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3" role="radiogroup" aria-label="Select a condition to analyze">
+                <label class="glass-card rounded-lg p-3 cursor-pointer text-center focus-visible" tabindex="0" role="radio" aria-checked="true">
+                    <input type="radio" name="disease" value="fracture" class="hidden" checked>
+                    <i class="fas fa-bone text-xl text-blue-300 mb-1"></i>
+                    <p class="text-sm font-medium">Fracture</p>
+                    <div class="mt-1 text-xs text-gray-300">Bone X-ray</div>
+                </label>
+                <label class="glass-card rounded-lg p-3 cursor-pointer text-center focus-visible" tabindex="0" role="radio" aria-checked="false">
+                    <input type="radio" name="disease" value="tb" class="hidden">
+                    <i class="fas fa-lungs text-xl text-blue-300 mb-1"></i>
+                    <p class="text-sm font-medium">Tuberculosis</p>
+                    <div class="mt-1 text-xs text-gray-300">Chest X-ray</div>
+                </label>
+                <label class="glass-card rounded-lg p-3 cursor-not-allowed opacity-50 text-center focus-visible" tabindex="0" role="radio" aria-checked="false" aria-disabled="true">
+                    <input type="radio" name="disease" value="breast_cancer" class="hidden" disabled>
+                    <i class="fas fa-ribbon text-xl text-blue-300 mb-1"></i>
+                    <p class="text-sm font-medium">Breast Cancer</p>
+                    <div class="mt-1 text-xs text-gray-300">Coming Soon</div>
+                </label>
+            </div>
+            
+            <form method="POST" action="/predict" enctype="multipart/form-data" id="upload-form" aria-label="Upload X-ray image form">
+                <input type="hidden" name="disease" id="disease-input">
+                
+                <!-- Image Upload Area -->
+                <div class="glass-card rounded-lg p-4 text-center border-2 border-transparent hover:border-blue-400 transition-colors relative" id="drop-zone" aria-live="polite">
+                    <i class="fas fa-x-ray text-2xl text-blue-300 mb-1"></i>
+                    <p class="text-gray-200">Drag & drop your X-ray or</p>
+                    <label for="file" class="text-blue-300 font-medium cursor-pointer hover:underline focus-visible" tabindex="0">Browse Files</label>
+                    <input type="file" name="file" id="file" accept="image/*" class="hidden" required aria-required="true">
+                    <div id="preview" class="mt-2 hidden">
+                        <img id="preview-img" class="max-w-xs rounded-md shadow" alt="Uploaded X-ray preview">
+                    </div>
+                </div>
+                
+                <button type="submit" id="analyze-btn" class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors focus-visible flex items-center justify-center" aria-label="Analyze the uploaded image">
+                    <i class="fas fa-stethoscope mr-1"></i> Analyze
+                </button>
+                
+                <!-- Help Text -->
+                <div class="mt-2 text-center">
+                    <p class="text-xs text-gray-300">For accurate results, use clear X-ray images with good lighting</p>
+                </div>
+                
+                <!-- Info Panel -->
+                <div class="info-panel">
+                    <h4><i class="fas fa-info-circle mr-1"></i> How it works</h4>
+                    <p>Our AI analyzes X-ray images to detect patterns associated with fractures and tuberculosis. The system has been trained on thousands of medical images to provide accurate results.</p>
+                </div>
+            </form>
+            
+            <div class="result-card mt-4 mb-4" id="resultSection" style="display: none;">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" id="resultTitle">Analysis Result</h5>
+                        <p class="card-text" id="predictionText"></p>
+                        
+                        <div class="confidence-container mb-3">
+                            <div class="confidence-label">Confidence Level:</div>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-bar" id="confidenceBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="confidence-value" id="confidenceValue">0%</div>
+                        </div>
+                        
+                        <p class="card-text" id="suggestionText">{{ suggestion or "Please consult a doctor for professional advice." }}</p>
+                        
+                        <div class="mt-3">
+                            <a href="/prediction_result" class="btn btn-primary heatmap-btn" id="heatmap-btn">
+                                <i class="fas fa-fire mr-1"></i> View Heatmap Analysis
+                            </a>
+                            <button class="btn btn-secondary ms-2" onclick="resetForm()">Analyze Another Image</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="glass-card py-2 z-10">
+        <div class="max-w-7xl mx-auto px-3 text-center">
+            <p class="text-xs text-gray-200">© 2025 HealthSync. Powered by AI Innovation.</p>
+        </div>
+    </footer>
+    <div id="toast" class="toast" role="alert"></div>
+    <div id="loadingSpinner" class="loading-spinner-container" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner-border text-light" role="status">
+                <span class="sr-only">Analyzing...</span>
+            </div>
+            <p class="mt-3 text-white">Analyzing your scan...</p>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            const cards = document.querySelectorAll('.glass-card.cursor-pointer');
+            const diseaseInput = document.getElementById('disease-input');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file');
+            const preview = document.getElementById('preview');
+            const previewImg = document.getElementById('preview-img');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const uploadForm = document.getElementById('upload-form');
+            const resultDiv = document.getElementById('result');
+            const predictionInput = document.getElementById('prediction_text');
+            const toast = document.getElementById('toast');
+            const resetBtn = document.getElementById('reset-btn');
+
+            // Handle disease type selection
+            cards.forEach((card, index) => {
+                card.addEventListener('click', () => {
+                    if (!card.querySelector('input').disabled) {
+                        cards.forEach(c => c.classList.remove('bg-blue-500', 'text-white'));
+                        card.classList.add('bg-blue-500', 'text-white');
+                        diseaseInput.value = card.querySelector('input').value;
+                    }
+                });
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        card.click();
+                    } else if (e.key === 'ArrowRight' && index < cards.length - 1) {
+                        cards[index + 1].focus();
+                    } else if (e.key === 'ArrowLeft' && index > 0) {
+                        cards[index - 1].focus();
+                    }
+                });
+            });
+            
+            if (cards.length > 0) {
+                cards[0].classList.add('bg-blue-500', 'text-white');
+                diseaseInput.value = cards[0].querySelector('input').value;
+            }
+
+            // Handle reset button
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    resultDiv.style.display = 'none';
+                    preview.classList.add('hidden');
+                    fileInput.value = '';
+                    showToast('Reset for new scan', 'info');
+                });
+            }
+
+            // Drag and drop handlers
+            [dropZone, fileInput].forEach(el => {
+                el.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                });
+                el.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('drag-over');
+                });
+                el.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                    handleFile(e.dataTransfer.files[0]);
+                });
+                el.addEventListener('change', (e) => {
+                    handleFile(fileInput.files[0]);
+                });
+            });
+
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    previewImg.src = URL.createObjectURL(file);
+                    preview.classList.remove('hidden');
+                    showToast('File uploaded successfully!', 'success');
+                    // Reset previous results when new file is loaded
+                    resultDiv.style.display = 'none';
+                } else {
+                    showToast('Invalid file type. Please upload an image.', 'error');
+                }
+            }
+
+            // Form submission handler
+            $('#upload-form').submit(function(e) {
+                e.preventDefault();
+                
+                var formData = new FormData(this);
+                $('#loadingSpinner').css({display: 'flex', opacity: 0}).animate({opacity: 1}, 200);
+                $('#resultSection').hide();
+                
+                // Add a timeout to hide the spinner if it takes too long
+                var loadingTimeout = setTimeout(function() {
+                    $('#loadingSpinner').animate({opacity: 0}, 300, function() {
+                        $(this).hide();
+                    });
+                }, 8000); // 8 seconds max for loading
+                
+                $.ajax({
+                    url: '/predict',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        clearTimeout(loadingTimeout);
+                        $('#loadingSpinner').animate({opacity: 0}, 300, function() {
+                            $(this).hide();
+                        });
+                        
+                        // Try to find prediction in various ways
+                        let predictionText = '';
+                        let confidence = '0';
+                        let suggestion = '';
+                        let filename = '';
+                        
+                        // Method 1: Check for hidden input with prediction
+                        const hiddenInput = $(response).find('#prediction_text');
+                        if (hiddenInput.length > 0) {
+                            predictionText = hiddenInput.val();
+                        }
+                        
+                        // Method 2: Parse from HTML
+                        if (!predictionText) {
+                            const resultElement = $(response).find('.card-title, h3').first();
+                            if (resultElement.length > 0) {
+                                predictionText = resultElement.text();
+                            }
+                        }
+                        
+                        // Get confidence from response if available
+                        const confidenceBar = $(response).find('#confidenceBar');
+                        if (confidenceBar.length > 0) {
+                            confidence = confidenceBar.css('width') || '0%';
+                            confidence = confidence.replace('%', '');
+                        } else {
+                            // Try to extract confidence from response content
+                            const confidenceValue = $(response).find('#confidence-value');
+                            if (confidenceValue.length > 0) {
+                                confidence = confidenceValue.text().replace('%', '').trim();
+                            }
+                            
+                            // Look for confidence in any other elements
+                            if (!confidence || confidence === '0') {
+                                const confidencePattern = /Confidence.*?(\d+\.?\d*)%/i;
+                                const responseText = $(response).text();
+                                const match = responseText.match(confidencePattern);
+                                if (match && match[1]) {
+                                    confidence = match[1];
+                                }
+                            }
+                        }
+                        
+                        // Debug log confidence value
+                        console.log("Extracted confidence value:", confidence);
+                        
+                        // Get suggestion from response if available
+                        const suggestionElement = $(response).find('#suggestionText');
+                        if (suggestionElement.length > 0) {
+                            suggestion = suggestionElement.text();
+                        }
+                        
+                        // Try to get the filename
+                        const filenameElement = $(response).find('#filename');
+                        if (filenameElement.length > 0) {
+                            filename = filenameElement.text() || filenameElement.val();
+                        } else {
+                            // Extract filename from the form data
+                            const fileInput = document.getElementById('file');
+                            if (fileInput && fileInput.files.length > 0) {
+                                filename = fileInput.files[0].name;
+                            }
+                        }
+                        
+                        // Display the prediction
+                        if (predictionText) {
+                            $('#resultSection').show();
+                            $('#predictionText').text(predictionText);
+                            
+                            // Set title and styling based on prediction
+                            if (predictionText.includes('Positive') || predictionText.includes('Tuberculosis')) {
+                                $('#resultTitle').text('ALERT: ' + predictionText);
+                                $('.card').removeClass('bg-success bg-warning').addClass('bg-danger text-white');
+                                if (!suggestion) {
+                                    $('#suggestionText').text('Please consult a doctor immediately!');
+                                } else {
+                                    $('#suggestionText').text(suggestion);
+                                }
+                                setConfidence(confidence || 85);
+                            } else if (predictionText.includes('Negative') || predictionText.includes('Normal')) {
+                                $('#resultTitle').text('GOOD NEWS: ' + predictionText);
+                                $('.card').removeClass('bg-danger bg-warning').addClass('bg-success text-white');
+                                if (!suggestion) {
+                                    $('#suggestionText').text('Your scan looks normal!');
+                                } else {
+                                    $('#suggestionText').text(suggestion);
+                                }
+                                setConfidence(confidence || 90);
+                            } else {
+                                $('#resultTitle').text(predictionText);
+                                $('.card').removeClass('bg-danger bg-success').addClass('bg-warning text-dark');
+                                if (!suggestion) {
+                                    $('#suggestionText').text('Additional analysis may be needed.');
+                                } else {
+                                    $('#suggestionText').text(suggestion);
+                                }
+                                setConfidence(confidence || 70);
+                            }
+                            
+                            // Update the heatmap button link with disease, filename and confidence
+                            const diseaseType = $('input[name="disease"]:checked').val();
+                            $('#heatmap-btn').attr('href', '/prediction_result?disease=' + diseaseType + 
+                                                   '&filename=' + encodeURIComponent(filename) + 
+                                                   '&confidence=' + confidence);
+                            
+                            // Make sure the heatmap button is visible and eye-catching
+                            $('.heatmap-btn').addClass('animate-pulse');
+                            setTimeout(function() {
+                                $('.heatmap-btn').removeClass('animate-pulse');
+                            }, 2000);
+                            
+                            // Scroll to the result section
+                            $('html, body').animate({
+                                scrollTop: $("#resultSection").offset().top - 100
+                            }, 500);
+                        } else {
+                            // Fallback: Show entire response in an iframe
+                            $('#resultSection').show();
+                            $('#predictionText').html('<iframe srcdoc="' + response.replace(/"/g, '&quot;') + '" style="width:100%;height:300px;border:none;"></iframe>');
+                        }
+                    },
+                    error: function() {
+                        clearTimeout(loadingTimeout);
+                        $('#loadingSpinner').animate({opacity: 0}, 300, function() {
+                            $(this).hide();
+                        });
+                        alert('Error processing the image. Please try again.');
+                    }
+                });
+            });
+            
+            // Function to set confidence level
+            function setConfidence(percentage) {
+                console.log("Setting confidence to:", percentage);
+                
+                // Ensure percentage is a number and within range
+                if (isNaN(percentage)) percentage = 0;
+                percentage = Math.max(0, Math.min(100, parseFloat(percentage)));
+                
+                // Animate the confidence bar
+                $('#confidenceBar').css('width', '0%').animate({width: percentage + '%'}, 1000);
+                $('#confidenceValue').text(percentage + '%');
+            }
+            
+            // Reset form function
+            window.resetForm = function() {
+                $('#upload-form')[0].reset();
+                $('#preview').addClass('hidden');
+                $('#preview-img').attr('src', '');
+                $('#resultSection').hide();
+                $('.card').removeClass('bg-danger bg-success bg-warning text-white text-dark');
+            };
+
+            function exportToPDF() {
+                // Show a loading toast
+                showToast('Generating professional report...', 'info');
+                
+                // Get the necessary data
+                const diseaseType = document.querySelector('input[name="disease"]:checked').value;
+                const predictionText = document.getElementById('prediction_text')?.value || 
+                                      document.querySelector('.result-title')?.textContent || 
+                                      'No prediction available';
+                const confidence = document.querySelector('.confidence-bar')?.style.width || '85%';
+                
+                // Create PDF content with jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add report header
+                doc.setFontSize(22);
+                doc.setTextColor(30, 58, 138);
+                doc.text('HealthSync Medical Report', 105, 20, {align: 'center'});
+                
+                // Add logo (Base64 encoded image would go here in production)
+                // doc.addImage(logoBase64, 'PNG', 20, 10, 30, 30);
+                
+                // Add line
+                doc.setDrawColor(30, 58, 138);
+                doc.setLineWidth(0.5);
+                doc.line(20, 30, 190, 30);
+                
+                // Add patient information
+                doc.setFontSize(12);
+                doc.setTextColor(80, 80, 80);
+                doc.text('Patient ID: ' + ({{ session.get('user_id', 'Guest') }}), 20, 45);
+                doc.text('Date: ' + new Date().toLocaleDateString(), 20, 52);
+                doc.text('Time: ' + new Date().toLocaleTimeString(), 20, 59);
+                
+                // Add Scan Information
+                doc.setFontSize(16);
+                doc.setTextColor(30, 58, 138);
+                doc.text('Scan Results', 20, 75);
+                
+                // Add result box
+                const resultColor = predictionText.includes('Positive') || predictionText.includes('Tuberculosis') ? 
+                                    [239, 68, 68] : [34, 197, 94];
+                doc.setFillColor(resultColor[0], resultColor[1], resultColor[2], 0.1);
+                doc.setDrawColor(resultColor[0], resultColor[1], resultColor[2]);
+                doc.roundedRect(20, 80, 170, 40, 3, 3, 'FD');
+                
+                // Add result text
+                doc.setFontSize(14);
+                doc.setTextColor(resultColor[0], resultColor[1], resultColor[2]);
+                doc.text('Diagnosis: ' + predictionText, 30, 95);
+                doc.setFontSize(12);
+                doc.setTextColor(80, 80, 80);
+                doc.text('Scan type: ' + (diseaseType === 'fracture' ? 'Bone Fracture Analysis' : 'Tuberculosis Detection'), 30, 105);
+                doc.text('Confidence level: ' + confidence, 30, 112);
+                
+                // Add recommendations
+                doc.setFontSize(16);
+                doc.setTextColor(30, 58, 138);
+                doc.text('Recommendations', 20, 140);
+                
+                doc.setFontSize(12);
+                doc.setTextColor(80, 80, 80);
+                if(predictionText.includes('Positive') || predictionText.includes('Tuberculosis')) {
+                    doc.text('• Please consult with a medical professional immediately', 25, 155);
+                    doc.text('• Schedule a follow-up appointment within 3-5 days', 25, 162);
+                    doc.text('• Rest and avoid physical strain on the affected area', 25, 169);
+                } else {
+                    doc.text('• No immediate medical attention required', 25, 155);
+                    doc.text('• Schedule a routine check-up in 6 months', 25, 162);
+                    doc.text('• Maintain healthy lifestyle and exercise routine', 25, 169);
+                }
+                
+                // Add disclaimer
+                doc.setFontSize(10);
+                doc.setTextColor(120, 120, 120);
+                doc.text('DISCLAIMER: This is an AI-assisted analysis and should be reviewed by a medical professional.', 105, 240, {align: 'center'});
+                doc.text('Results should be verified by clinical examination.', 105, 245, {align: 'center'});
+                
+                // Add footer
+                doc.setDrawColor(30, 58, 138);
+                doc.setLineWidth(0.5);
+                doc.line(20, 250, 190, 250);
+                doc.setFontSize(10);
+                doc.text('© 2025 HealthSync. All rights reserved.', 105, 258, {align: 'center'});
+                doc.text('Generated by HealthSync AI Diagnostics System v2.0', 105, 264, {align: 'center'});
+                
+                // Generate case number
+                const caseNumber = 'HS-' + Date.now().toString().slice(-8);
+                doc.text('Case #: ' + caseNumber, 20, 270);
+                
+                // Save the PDF
+                doc.save('HealthSync_Report_' + new Date().toISOString().slice(0,10) + '_' + caseNumber + '.pdf');
+                
+                showToast('Report downloaded successfully!', 'success');
+            }
+
+            function showToast(message, type) {
+                toast.textContent = message;
+                toast.className = 'toast ' + (type === 'error' ? 'bg-red-100' : type === 'success' ? 'bg-green-100' : 'bg-blue-100');
+                toast.style.display = 'block';
+                setTimeout(() => toast.style.display = 'none', 2000);
+            }
+
+            // Show loading spinner during form submission
+            document.getElementById('upload-form').addEventListener('submit', function() {
+                document.getElementById('loadingSpinner').style.display = 'flex';
+                
+                // Set a timeout to automatically hide the spinner after a reasonable time
+                setTimeout(function() {
+                    // Only hide if it's still showing (the main submit handler might have already hidden it)
+                    if (document.getElementById('loadingSpinner').style.display === 'flex') {
+                        document.getElementById('loadingSpinner').style.display = 'none';
+                    }
+                }, 15000); // 15 seconds maximum display time
+            });
+
+            // Add code to update heatmap link with relevant parameters
+            function updateHeatmapLink(disease, filename) {
+                const currentConfidence = $('#confidenceValue').text().replace('%', '');
+                $('#heatmap-btn').attr('href', `/prediction_result?disease=${disease}&filename=${filename}&confidence=${currentConfidence}`);
+            }
+            
+            // Update updateHeatmapLink call in the AJAX success handler
+            // ... inside AJAX success function ...
+            // After setting confidence:
+            setConfidence(confidence || defaultConfidence);
+            // Update the heatmap button URL with parameters
+            updateHeatmapLink(
+                $('input[name="disease"]:checked').val(),
+                file.name // Add this
+            );
+            // ... existing code ...
+        });
+    </script>
+</body>
+</html>

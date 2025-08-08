@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to HealthSync</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💉</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #4b6cb7 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+        }
+        .wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234b6cb7" fill-opacity="0.2" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,85.3C672,75,768,85,864,106.7C960,128,1056,160,1152,176C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+            background-size: cover;
+        }
+        .content {
+            width: 100%;
+            min-height: 100vh;
+            padding: 2rem 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 100%;
+            padding: 1.5rem 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo i {
+            color: #4ade80;
+        }
+        .logo:hover {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        h1 {
+            font-size: 5rem;
+            font-weight: 900;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #a3bffa;
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+            animation: fadeInDown 2s ease-in-out, float 5s ease-in-out infinite;
+        }
+        h2 {
+            font-size: 2.75rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: #93c5fd;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+        }
+        p {
+            font-size: 1.4rem;
+            margin-bottom: 2.5rem;
+            color: #e0e7ff;
+            max-width: 950px;
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 2;
+            padding: 0 1rem;
+        }
+        .btn-try {
+            background: #4ade80;
+            color: #1e3a8a;
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: background 0.3s, transform 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        .btn-try:hover {
+            background: #22c55e;
+            transform: translateY(-4px);
+        }
+        .testimonial {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px;
+            width: 100%;
+            border: 1px solid #93c5fd;
+        }
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1300px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .swiper-container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            height: 400px;
+            overflow: hidden;
+            position: relative;
+        }
+        .swiper-slide {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .swiper-slide img {
+            width: auto;
+            height: auto;
+            max-width: 90%;
+            max-height: 220px;
+            object-fit: contain;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+        .swiper-slide .content {
+            min-height: auto;
+            height: auto;
+            width: 100%;
+            padding: 0;
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+        .swiper-slide .content p {
+            margin-bottom: 0;
+            font-size: 1rem;
+        }
+        .role-section {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 1000px;
+            margin: 2rem 0;
+            flex-wrap: wrap; /* Added for mobile responsiveness */
+        }
+        .role-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            width: 45%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
+            margin-bottom: 2rem; /* Added for mobile spacing */
+        }
+        .role-card a {
+            text-decoration: none;
+            color: #4ade80;
+            font-weight: 600;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .role-card a:hover {
+            background-color: rgba(0, 0, 0, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .swiper-pagination {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+        }
+        .swiper-pagination-bullet {
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 1;
+        }
+        .swiper-pagination-bullet-active {
+            background: #4ade80;
+        }
+        /* Footer styles */
+        footer {
+            width: 100%;
+            padding: 2rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            text-align: center;
+            margin-top: 2rem;
+            backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            position: relative;
+        }
+        footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        footer p {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #cbd5e0;
+        }
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        .social-links a {
+            color: #93c5fd;
+            font-size: 1.5rem;
+            transition: color 0.3s ease, transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .social-links a:hover {
+            color: #4ade80;
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 3rem;
+            }
+            h2 {
+                font-size: 2rem;
+            }
+            p {
+                font-size: 1.1rem;
+                line-height: 1.7;
+            }
+            .swiper-container {
+                height: 300px;
+            }
+            .swiper-slide img {
+                max-height: 150px;
+            }
+            .role-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            .role-card {
+                width: 90%;
+                margin-bottom: 1.5rem;
+            }
+        }
+        /* Smaller mobile devices */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2.25rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            .btn-try {
+                padding: 0.75rem 1.5rem;
+            }
+            .swiper-container {
+                height: 250px;
+            }
+            .swiper-slide img {
+                max-height: 120px;
+            }
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="wave"></div>
+    <div class="header">
+        <div class="logo-container">
+            <a href="#" class="logo">
+                <i class="fas fa-heartbeat"></i> HealthSync
+            </a>
+        </div>
+        <a href="{{ url_for('login') }}" class="btn-try">Try Us!</a>
+    </div>
+    <div class="content">
+        <!-- Slideshow -->
+        <div class="section">
+            <div class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <img src="{{ url_for('static', filename='images/WHO.png') }}" alt="WHO">
+                        <div class="content">
+                            <p class="text-base text-gray-200">Supported by World Health Organization</p>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <img src="{{ url_for('static', filename='images/apollo_hospital.png') }}" alt="Apollo Hospital">
+                        <div class="content">
+                            <p class="text-base text-gray-200">Partnered with Apollo Hospitals</p>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <img src="{{ url_for('static', filename='images/ministry_of_health.png') }}" alt="Ministry of Health">
+                        <div class="content">
+                            <p class="text-base text-gray-200">Endorsed by Ministry of Health Affairs</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-pagination"></div>
+            </div>
+        </div>
+
+        <!-- Welcome Section -->
+        <div class="section">
+            <i class="fas fa-heartbeat text-8xl text-blue-300 mb-10 animate-pulse"></i>
+            <h1 class="mx-auto" style="max-width: 1000px;">Welcome to HealthSync</h1>
+            <p class="mx-auto" style="max-width: 1000px;">Transforming global healthcare with state-of-the-art AI diagnostics for fractures, tuberculosis, and beyond—tailored for doctors and patients alike.</p>
+        </div>
+
+        <!-- Role Selection Section -->
+        <div class="section">
+            <h2 class="mx-auto" style="max-width: 1000px;">Choose Your Role</h2>
+            <div class="role-section">
+                <div class="role-card">
+                    <h3 class="text-xl text-white mb-2">For Doctors</h3>
+                    <p class="text-gray-300 mb-4">Access advanced AI tools for X-ray analysis and diagnostics.</p>
+                    <a href="{{ url_for('login') }}" class="btn-try">Get Started</a>
+                </div>
+                <div class="role-card">
+                    <h3 class="text-xl text-white mb-2">For Patients</h3>
+                    <p class="text-gray-300 mb-4">View your health results and scan your X-rays.</p>
+                    <a href="{{ url_for('login') }}" class="btn-try">Get Started</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Us Section -->
+        <div class="section">
+            <h2 class="mx-auto" style="max-width: 1000px;">About Us</h2>
+            <div class="text-gray-200 max-w-5xl mx-auto text-center space-y-6" style="max-width: 1000px;">
+                <p>HealthSync is a pioneering leader in healthcare technology, driven by cutting-edge artificial intelligence to deliver unmatched diagnostic precision. Our platform equips medical professionals with advanced tools to analyze X-rays, accurately detecting fractures, tuberculosis, and more, with a vision to expand across a diverse range of health conditions. Founded on the principle of accessibility, we provide patients with clear, actionable health insights while adhering to the highest standards of data security and confidentiality. Globally acclaimed by prestigious medical institutions and trusted by individuals, HealthSync is committed to revolutionizing healthcare—offering speed, accuracy, and inclusivity to every corner of the world.</p>
+            </div>
+        </div>
+
+        <!-- Testimonials Slideshow -->
+        <div class="section">
+            <h2 class="mx-auto" style="max-width: 1000px;">What People Say</h2>
+            <div class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="testimonial">
+                            <p class="text-gray-200 text-center">"This tool has revolutionized my diagnostic process, saving hours and improving accuracy. A must-have for every radiologist!"</p>
+                            <p class="text-base mt-2 text-blue-300 text-center">- Dr. Anil Sharma, Radiologist</p>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="testimonial">
+                            <p class="text-gray-200 text-center">"HealthSync gave me peace of mind with my fracture results. So simple and reliable—highly recommend it!"</p>
+                            <p class="text-base mt-2 text-blue-300 text-center">- Priya Patel, Patient</p>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="testimonial">
+                            <p class="text-gray-200 text-center">"As a doctor, I trust HealthSync for its detailed analysis, making patient care more efficient."</p>
+                            <p class="text-base mt-2 text-blue-300 text-center">- Dr. Meera Kapoor, Orthopedic Surgeon</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 HealthSync. All rights reserved.</p>
+                <p>Empowering healthcare with AI innovation worldwide</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+                    <a href="#" aria-label="X (Twitter)"><i class="fab fa-x"></i></a>
+                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Swiper JS -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize both Swiper instances with improved configuration
+            const swiperOptions = {
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+                loop: true,
+                speed: 800,
+                effect: 'fade', // Changed to fade for smoother transitions
+                fadeEffect: {
+                    crossFade: true // Enable crossfade for smoother transitions
+                },
+                spaceBetween: 30,
+                centeredSlides: true,
+                slidesPerView: 1,
+                observer: true, // Better handling of DOM changes
+                observeParents: true,
+                preventClicks: true,
+                watchOverflow: true,
+            };
+            
+            // For all Swiper containers in the document
+            document.querySelectorAll('.swiper-container').forEach(function(container, index) {
+                // Create a unique instance for each container
+                new Swiper(container, swiperOptions);
+            });
+        });
+    </script>
+</body>
+</html>

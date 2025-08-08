@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Results - HealthSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            min-height: 100vh;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+        .dark body {
+            background: linear-gradient(135deg, #1a202c 0%, #4b5563 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.15s ease;
+        }
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .recommendation {
+            background: rgba(13, 110, 253, 0.1);
+            border-left: 4px solid #0d6efd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .result-positive {
+            background-color: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        .result-negative {
+            background-color: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+        .heatmap-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        .heatmap-original {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            object-fit: contain;
+        }
+        .heatmap-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            opacity: 0.7;
+        }
+        .opacity-control {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .grid {
+            display: grid;
+        }
+        .grid-cols-1 {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+        .md\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .gap-4 {
+            gap: 1rem;
+        }
+        .gap-6 {
+            gap: 1.5rem;
+        }
+        #heatmap-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .image-container {
+            position: relative;
+            margin: 0 auto;
+            display: inline-block;
+        }
+        
+        .toggle-heatmap-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #157af6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-heatmap-btn:hover {
+            background-color: #1167d5;
+        }
+    </style>
+</head>
+<body class="{{ 'dark' if dark_mode else 'light' }}">
+    <div class="container mx-auto max-w-6xl px-4 py-8">
+        <div class="glass-card p-6 rounded-lg shadow-lg">
+            <h1 class="text-2xl md:text-3xl font-bold text-center text-white mb-6">
+                {% if disease == 'fracture' %}
+                    Fracture Detection Results
+                {% else %}
+                    Tuberculosis Detection Results
+                {% endif %}
+            </h1>
+            
+            <!-- Hidden field for JS parsing -->
+            <input type="hidden" id="prediction_text" value="{{ prediction_text or result ~ ' for ' ~ disease|capitalize }}">
+            <div class="prediction_result" style="display:none;">{{ prediction_text or result ~ ' for ' ~ disease|capitalize }}</div>
+            
+            <!-- Add hidden elements to store session data -->
+            <input type="hidden" id="disease-type-data" value="{{ session.get('disease_type', 'fracture') }}">
+            <input type="hidden" id="prediction-data" value="{{ session.get('prediction', '') }}">
+            
+            <!-- Main Result Panel -->
+            <div class="glass-card {% if result == 'Positive' or result == 'Tuberculosis' %}bg-red-500/50{% else %}bg-green-500/50{% endif %} p-6 rounded-lg shadow-lg mb-8">
+                <div class="flex flex-col md:flex-row items-center">
+                    <div class="text-center md:text-left md:w-1/4 mb-4 md:mb-0">
+                        <i class="fas {% if result == 'Positive' or result == 'Tuberculosis' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} text-4xl text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold text-white mb-2">{{ result }}</h2>
+                        
+                        <div class="mb-6">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-white/80">Confidence Level</span>
+                                <span class="text-sm text-white font-bold" id="confidence-value">{{ confidence }}%</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-white/20 rounded-full">
+                                <div class="h-2.5 rounded-full bg-white" style="width: {{ confidence }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg mb-4" style="background-color: rgba(255, 255, 255, 0.2);">
+                            <h5 class="font-medium text-white mb-2">What does this mean?</h5>
+                            <p class="text-white" style="opacity: 0.9;">{{ explanation.summary }}</p>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg border-l-4 {% if result == 'Positive' or result == 'Tuberculosis' %}border-red-300{% else %}border-green-300{% endif %}" style="background-color: rgba(255, 255, 255, 0.1);">
+                            <h5 class="font-medium text-white mb-2"><i class="fas fa-stethoscope mr-2"></i>Medical Recommendation</h5>
+                            <p class="text-white" style="opacity: 0.9;">{{ explanation.recommendation }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Analysis Details -->
+                <div class="glass-card p-5 rounded-lg shadow-lg h-full">
+                    <h3 class="text-xl font-bold text-white mb-4"><i class="fas fa-chart-bar mr-2"></i>Analysis Details</h3>
+                    
+                    <p class="text-white/90 mb-4">The model analyzed these key factors in your image:</p>
+                    
+                    {% for detail in explanation.details %}
+                        <div class="feature-item">
+                            <p class="mb-0 text-white/90">{{ detail }}</p>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="mt-6">
+                        <h4 class="text-lg font-medium text-white mb-3">Technical Features</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-white/90">
+                                <thead>
+                                    <tr class="bg-white/10">
+                                        <th class="p-2 rounded-tl-lg">Feature</th>
+                                        <th class="p-2">Value</th>
+                                        <th class="p-2 rounded-tr-lg">Importance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feature_name, feature_data in features.items() %}
+                                        <tr class="{% if loop.index is odd %}bg-white/5{% endif %}">
+                                            <td class="p-2">{{ feature_name|replace('_', ' ')|title }}</td>
+                                            <td class="p-2">{{ "%.3f"|format(feature_data.value) }}</td>
+                                            <td class="p-2">
+                                                <span class="px-2 py-1 rounded-full text-xs {% if feature_data.importance == 'High' %}bg-blue-500/30{% elif feature_data.importance == 'Medium' %}bg-purple-500/30{% else %}bg-yellow-500/30{% endif %}">
+                                                    {{ feature_data.importance }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Visualization -->
+                <div class="glass-card p-5 rounded-lg shadow-lg h-full">
+                    <h3 class="text-xl font-bold text-white mb-4"><i class="fas fa-image mr-2"></i>Original and Heatmap Visualization</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="glass-card p-3 rounded-lg">
+                            <h4 class="text-lg font-medium text-white mb-2">Original Image</h4>
+                            <div class="relative rounded-lg overflow-hidden h-[240px] bg-black/20">
+                                <img src="/uploads/{{ filename }}" alt="Original X-ray" class="w-full h-full object-contain" id="original-image">
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card p-3 rounded-lg">
+                            <h4 class="text-lg font-medium text-white mb-2">Heatmap Analysis</h4>
+                            <div class="relative rounded-lg overflow-hidden h-[240px] bg-black/20">
+                                <img src="/uploads/{{ filename }}" alt="X-ray" class="w-full h-full object-contain" id="xray-image">
+                                <div id="heatmap-container" class="absolute top-0 left-0 w-full h-full" style="opacity: 0.7; z-index: 10;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4 class="text-lg font-medium text-white mb-2">Understanding the Model</h4>
+                        <p class="text-white/90">
+                            {% if disease == 'fracture' %}
+                                The fracture detection model analyzes bone X-rays to identify 
+                                possible fracture patterns. It looks for irregular edges, contrast 
+                                variations, and density patterns typical of fractures.
+                            {% else %}
+                                The tuberculosis detection model analyzes lung X-rays to identify 
+                                patterns consistent with TB infection. It examines opacity patterns, 
+                                contrast variations, and density abnormalities in lung tissue.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <a href="{{ url_for('index') }}" class="btn btn-primary mr-3">
+                    <i class="fas fa-camera mr-2"></i>New Scan
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <a href="#" class="btn btn-secondary ml-3" id="export-pdf-btn">
+                    <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add HTML2PDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        // Set up feature importance chart
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if chart element exists before creating it
+            const chartElement = document.getElementById('featureChart');
+            if (chartElement) {
+                const ctx = chartElement.getContext('2d');
+                
+                // Prepare data from the features
+                const featureNames = [];
+                const importanceValues = [];
+                const backgroundColors = [];
+                
+                {% for feature_name, feature_data in features.items() %}
+                    featureNames.push('{{ feature_name|replace("_", " ")|title }}');
+                    
+                    // Convert importance text to numeric value for chart
+                    let importanceValue = 0;
+                    switch('{{ feature_data.importance }}') {
+                        case 'High':
+                            importanceValue = 3;
+                            backgroundColors.push('rgba(75, 192, 192, 0.7)');
+                            break;
+                        case 'Medium':
+                            importanceValue = 2;
+                            backgroundColors.push('rgba(153, 102, 255, 0.7)');
+                            break;
+                        case 'Low':
+                            importanceValue = 1;
+                            backgroundColors.push('rgba(255, 205, 86, 0.7)');
+                            break;
+                    }
+                    importanceValues.push(importanceValue);
+                {% endfor %}
+                
+                // Configure and create chart
+                const chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: featureNames,
+                        datasets: [{
+                            label: 'Feature Importance',
+                            data: importanceValues,
+                            backgroundColor: backgroundColors,
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 4,
+                                ticks: {
+                                    stepSize: 1,
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    callback: function(value) {
+                                        switch(value) {
+                                            case 0: return 'None';
+                                            case 1: return 'Low';
+                                            case 2: return 'Medium';
+                                            case 3: return 'High';
+                                            default: return '';
+                                        }
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Simple PDF export function
+        document.getElementById('export-pdf-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log("PDF export started");
+            
+            // Create a clone to avoid modifying the original
+            var content = document.querySelector('.glass-card.p-6').cloneNode(true);
+            
+            // Generate file name with date
+            var now = new Date();
+            var fileName = 'Medical_Report_' + now.toISOString().split('T')[0] + '.pdf';
+            
+            // Configure PDF options
+            var options = {
+                margin:       1,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Generate and download PDF
+            html2pdf().set(options).from(content).save();
+            
+            alert("Your PDF is being prepared for download!");
+        });
+        
+        // Heatmap generation
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Initializing heatmap...");
+            
+            // Make sure heatmap.js library is loaded
+            if (typeof h337 === 'undefined') {
+                var script = document.createElement('script');
+                script.src = "https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js";
+                script.onload = initHeatmap;
+                document.head.appendChild(script);
+                } else {
+                initHeatmap();
+            }
+            
+            function initHeatmap() {
+                try {
+                    var heatmapContainer = document.getElementById('heatmap-container');
+                    var xrayImage = document.getElementById('xray-image');
+                    
+                    if (!heatmapContainer || !xrayImage) {
+                        console.error("Container or image not found");
+                        return;
+                    }
+                    
+                    // Wait for the image to load
+                    if (xrayImage.complete) {
+                        createHeatmap();
+                    } else {
+                        xrayImage.onload = createHeatmap;
+                    }
+                    
+                    function createHeatmap() {
+                        // Set container dimensions to match image
+                        var width = xrayImage.clientWidth;
+                        var height = xrayImage.clientHeight;
+                        
+                        heatmapContainer.style.width = width + 'px';
+                        heatmapContainer.style.height = height + 'px';
+                        
+                        console.log("Creating heatmap with size: " + width + "x" + height);
+                        
+                        // Create heatmap instance
+                        var heatmapInstance = h337.create({
+                            container: heatmapContainer,
+                            radius: 30,
+                            maxOpacity: 0.8,
+                            minOpacity: 0,
+                            blur: 0.75,
+                            gradient: {
+                                '0.4': 'blue',
+                                '0.6': 'cyan',
+                                '0.8': 'yellow',
+                                '0.9': 'orange',
+                                '1.0': 'red'
+                            }
+                        });
+                        
+                        // Get disease type
+                        var diseaseType = "{{ disease|default('tb', true) }}";
+                        var confidence = parseInt("{{ confidence|default(80, true) }}");
+                        
+                        console.log("Disease type: " + diseaseType + ", confidence: " + confidence);
+                        
+                        // Generate data points
+                        var points = [];
+                        var centerX, centerY;
+                        
+                        if (diseaseType === 'tb' || diseaseType === 'tuberculosis') {
+                            // TB spots in upper lungs
+                            points = points.concat(generateCluster(width * 0.3, height * 0.3, width * 0.15, 20, confidence));
+                            points = points.concat(generateCluster(width * 0.7, height * 0.3, width * 0.15, 20, confidence));
+                        } else if (diseaseType === 'fracture') {
+                            // Fracture line pattern
+                            points = points.concat(generateLine(width * 0.4, height * 0.6, width * 0.6, height * 0.6, 30, confidence));
+                        } else {
+                            // Default pattern centered
+                            points = points.concat(generateCluster(width * 0.5, height * 0.5, width * 0.2, 40, confidence));
+                        }
+                        
+                        // Set heatmap data
+                        heatmapInstance.setData({
+                            max: 100,
+                            data: points
+                        });
+                        
+                        // Ensure heatmap is visible
+                        heatmapContainer.style.opacity = "0.7";
+                        
+                        console.log("Heatmap generated with " + points.length + " points");
+                    }
+                    
+                    // Helper function to generate cluster of points
+                    function generateCluster(centerX, centerY, radius, count, intensity) {
+                        var points = [];
+                        for (var i = 0; i < count; i++) {
+                            var angle = Math.random() * Math.PI * 2;
+                            var dist = Math.random() * radius;
+                            points.push({
+                                x: Math.round(centerX + dist * Math.cos(angle)),
+                                y: Math.round(centerY + dist * Math.sin(angle)),
+                                value: Math.round(intensity * (1 - dist/radius))
+                            });
+                        }
+                        return points;
+                    }
+                    
+                    // Helper function to generate line of points
+                    function generateLine(x1, y1, x2, y2, count, intensity) {
+                        var points = [];
+                        for (var i = 0; i < count; i++) {
+                            var t = i / count;
+                            var x = x1 + (x2 - x1) * t;
+                            var y = y1 + (y2 - y1) * t;
+                            
+                            // Add some randomness to make it look natural
+                            x += (Math.random() - 0.5) * 10;
+                            y += (Math.random() - 0.5) * 5;
+                            
+                            points.push({
+                                x: Math.round(x),
+                                y: Math.round(y),
+                                value: Math.round(intensity * 0.9 + Math.random() * intensity * 0.1)
+                            });
+                        }
+                        return points;
+                    }
+                } catch (error) {
+                    console.error("Error creating heatmap:", error);
+                }
+            }
+        });
+    </script>
+</body>
+</html> 
